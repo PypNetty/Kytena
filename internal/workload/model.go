@@ -111,13 +111,20 @@ func (w *Workload) HasLabelPrefix(prefix string) bool {
 
 // NewWorkload creates a new Workload instance
 func NewWorkload(name, namespace string, wType WorkloadType, imageID string, businessCriticality int, labels, annotations map[string]string) *Workload {
+
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
 	return &Workload{
 		Name:                name,
 		Namespace:           namespace,
 		Type:                wType,
 		ImageID:             imageID,
 		BusinessCriticality: businessCriticality,
-		Labels:              make(map[string]string),
-		Annotations:         make(map[string]string),
+		Labels:              labels,
+		Annotations:         annotations,
 	}
 }
