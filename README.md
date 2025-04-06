@@ -1,4 +1,4 @@
-# Kyra - Orchestrateur Intelligent de Sécurité Kubernetes
+# Kyra - Intelligent Kubernetes Security Orchestrator
 
 ![Status](https://img.shields.io/badge/Status-POC-yellow)
 ![Language](https://img.shields.io/badge/Language-Go-blue)
@@ -6,96 +6,132 @@
 
 ## Vision
 
-Kyra est un orchestrateur de décisions de sécurité pour Kubernetes qui révolutionne la gestion des menaces dans les environnements cloud-native. Son innovation réside dans sa capacité unique à intégrer le contexte business aux décisions de sécurité, tout en maintenant une défense robuste contre les attaques sophistiquées.
+Kyra is an intelligent security orchestrator for Kubernetes that revolutionizes vulnerability management in cloud-native environments. Its innovation lies in its unique ability to integrate business context into security decisions while maintaining robust defense against sophisticated attacks.
 
-## Le concept de KnownRisk
+## The KnownRisk Concept
 
-Le **KnownRisk** est la brique fondamentale de Kyra - une tolérance documentée à un écart de sécurité avec:
-- Traçabilité (daté, signé, documenté)
-- Contexte business et technique
-- Durée de validité définie
-- Mécanisme de réévaluation automatique
-- Liens avec les workloads concernés
+The **KnownRisk** is the fundamental building block of Kyra - a documented tolerance to a security deviation with:
+- Traceability (dated, signed, documented)
+- Business and technical context
+- Defined validity period
+- Automatic reevaluation mechanism
+- Links to affected workloads
 
-Lorsqu'une vulnérabilité est détectée mais ne peut être corrigée immédiatement (pour des raisons business, techniques, ou autres), Kyra permet de documenter cette décision comme un KnownRisk, puis de surveiller et réévaluer automatiquement ce risque au fil du temps.
+When a vulnerability is detected but cannot be fixed immediately (for business, technical, or other reasons), Kyra enables documenting this decision as a KnownRisk, then automatically monitoring and reevaluating this risk over time.
 
-## Fonctionnalités principales
+## Key Features
 
-- 🔍 **Observer** - Récupère des événements de sécurité de diverses sources
-- 🔄 **Corréler** - Associe alertes, comportements, workloads et historique
-- 🧠 **Contextualiser** - Prend en compte le business, le namespace, la criticité
-- 📋 **Proposer** - Génère des PRs, tickets ou plans d'action adaptés
-- 💾 **Mémoriser** - Archive les décisions humaines et leur justification
-- ⚡ **Réagir** - Alerte si une vulnérabilité tolérée devient active
-- 📝 **Expliquer** - Justifie chaque action, chaque lien logique ou refus
+- 🔍 **Observe** - Collect security events from various sources
+- 🔄 **Correlate** - Associate alerts, behaviors, workloads, and history
+- 🧠 **Contextualize** - Consider business, namespace, and criticality
+- 📋 **Propose** - Generate PRs, tickets, or adapted action plans
+- 💾 **Memorize** - Archive human decisions and their justification
+- ⚡ **React** - Alert if an accepted vulnerability becomes active
+- 📝 **Explain** - Justify each action, each logical link, or refusal
 
-## État du projet
+## Project Status
 
-Kyra est actuellement en phase de Proof of Concept (POC). Les fonctionnalités sont en cours de développement et ne sont pas encore prêtes pour un environnement de production.
+Kyra is currently in a Proof of Concept (POC) phase. The core features have been implemented but are not yet ready for production environments.
 
-## Structure du projet
+### Implemented Features
+- ✅ Core KnownRisk data model and lifecycle management
+- ✅ YAML-based persistence 
+- ✅ Periodic reevaluation system
+- ✅ Notification system
+- ✅ Simulated vulnerability scanner integration (Trivy, Falco)
+- ✅ Comprehensive CLI with Cobra
+- ✅ Security dashboard and reporting
 
-```
-kyra/
-├── cmd/              # Points d'entrée de l'application
-│   └── kyra/         
-│       └── main.go   # Point d'entrée principal
-├── internal/         # Code privé de l'application
-│   ├── knownrisk/    # Gestion des KnownRisks
-│   │   ├── model.go
-│   │   └── repository.go
-│   └── workload/     # Gestion des Workloads
-│       └── model.go
-├── data/             # Données persistantes
-│   └── knownrisks/   # Stockage des KnownRisks
-├── go.mod            # Dépendances Go
-└── README.md         # Ce fichier
-```
+### Planned Features
+- 🔄 Real scanner integrations
+- 🔄 Kubernetes API integration
+- 🔄 Advanced alerting systems
+- 🔄 Web-based UI
 
-## Installation
+## Getting Started
 
-Instructions d'installation à venir lorsque le POC sera plus avancé.
-
-## Utilisation
-
-Instructions d'utilisation à venir lorsque le POC sera plus avancé.
-
-## Développement
-
-### Prérequis
-
-- Go 1.19 ou supérieur
+### Prerequisites
+- Go 1.19 or higher
 - Git
 
-### Configuration de l'environnement de développement
+### Installation
 
-1. Cloner le dépôt
+1. Clone the repository:
    ```bash
    git clone https://github.com/PypNetty/Kyra.git
    cd Kyra
    ```
 
-2. Installer les dépendances
+2. Build the binary:
    ```bash
-   go mod tidy
+   go build -o kyra cmd/kyra/main.go
    ```
 
-3. Exécuter les tests
+3. Run Kyra:
    ```bash
-   go test ./...
+   ./kyra --help
    ```
 
-### Gestion des branches
+### Quick Start Guide
 
-- `main` - Branche principale, toujours stable
-- `feature/*` - Branches de fonctionnalités
-- `bugfix/*` - Corrections de bugs
-- `release/*` - Préparation des versions
+1. **Scan for vulnerabilities**:
+   ```bash
+   ./kyra scan --accept-proposed
+   ```
 
-## Licence
+2. **View your security dashboard**:
+   ```bash
+   ./kyra dashboard
+   ```
 
-Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.
+3. **Monitor for expired risks**:
+   ```bash
+   ./kyra monitor
+   ```
 
-## Contact
+## Documentation
 
-Pour toute question ou suggestion concernant Kyra, n'hésitez pas à [ouvrir une issue](https://github.com/PypNetty/Kyra/issues).
+- Architecture details
+- Comprehensive usage instructions
+- Workflow examples
+
+## Development
+
+### Project Structure
+
+```
+kyra/
+├── cmd/               # Command-line entry points
+│   └── kyra/          
+│       └── main.go    # Main entry point
+├── internal/          # Private application code
+│   ├── cli/           # CLI components
+│   │   └── cmd/       # Cobra commands
+│   ├── knownrisk/     # KnownRisk management
+│   ├── scanner/       # Scanner integration
+│   ├── reevaluator/   # Reevaluation system
+│   └── workload/      # Workload management
+├── data/              # Data storage
+│   └── knownrisks/    # KnownRisk YAML files
+├── logs/              # Log files
+├── go.mod             # Go dependencies
+└── README.md          # This file
+```
+
+### Key Commands
+
+- **List KnownRisks**: `./kyra list`
+- **Create KnownRisk**: `./kyra create`
+- **View KnownRisk**: `./kyra get <id>`
+- **Update KnownRisk**: `./kyra update <id>`
+- **Run Security Scan**: `./kyra scan`
+- **View Dashboard**: `./kyra dashboard`
+- **Start Monitor**: `./kyra monitor`
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
