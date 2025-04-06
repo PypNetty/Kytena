@@ -85,6 +85,7 @@ func NewKnownRisk(
 	workloadInfo workload.Workload,
 	justification string,
 	acceptedBy string,
+	acceptedAt time.Time,
 	expiresAt time.Time,
 	severity Severity,
 ) *KnownRisk {
@@ -95,7 +96,7 @@ func NewKnownRisk(
 		WorkloadInfo:    workloadInfo,
 		Justification:   justification,
 		AcceptedBy:      acceptedBy,
-		AcceptedAt:      now,
+		AcceptedAt:      acceptedAt,
 		ExpiresAt:       expiresAt,
 		Severity:        severity,
 		Status:          StatusActive,

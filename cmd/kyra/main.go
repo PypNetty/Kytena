@@ -68,6 +68,7 @@ func main() {
 		*activeWorkload,
 		"Vulnerability in Nginx, but not exploitable in our configuration. Will be fixed in the next planned update.",
 		"team-security@example.com",
+		time.Now(),
 		time.Now().Add(30*24*time.Hour), // Expires in 30 days
 		knownrisk.SeverityHigh,
 	)
@@ -105,6 +106,7 @@ func main() {
 		*expiringWorkload,
 		"MySQL vulnerability that requires database restart. Scheduled for tonight's maintenance window.",
 		"team-dba@example.com",
+		time.Now(),
 		time.Now().Add(1*time.Hour), // Expires in 1 hour
 		knownrisk.SeverityMedium,
 	)
@@ -142,6 +144,7 @@ func main() {
 		*expiredWorkload,
 		"Redis vulnerability, accepted temporarily while testing patch. Patch test was delayed.",
 		"team-security@example.com",
+		time.Now().Add(-48*time.Hour), // Accepted 2 days ago
 		time.Now().Add(-24*time.Hour), // Expired 1 day ago
 		knownrisk.SeverityHigh,
 	)
