@@ -1,4 +1,4 @@
-# Kyra - Intelligent Kubernetes Security Orchestrator
+# Kytena - Intelligent Kubernetes Security Orchestrator
 
 ![Status](https://img.shields.io/badge/Status-POC-yellow)
 ![Language](https://img.shields.io/badge/Language-Go-blue)
@@ -6,7 +6,7 @@
 
 ## Vision
 
-Kyra is an intelligent security orchestrator for Kubernetes that revolutionizes vulnerability management in cloud-native environments. Its innovation lies in its unique ability to integrate business context into security decisions while maintaining robust defense against sophisticated attacks.
+Kytena is an intelligent security orchestrator for Kubernetes that revolutionizes vulnerability management in cloud-native environments. Its innovation lies in its unique ability to integrate business context into security decisions while maintaining robust defense against sophisticated attacks.
 
 ## The KnownRisk Concept
 
@@ -31,7 +31,7 @@ When a vulnerability is detected but cannot be fixed immediately (for business, 
 
 ## Project Status
 
-Kyra is currently in a Proof of Concept (POC) phase. The core features have been implemented but are not yet ready for production environments.
+Kytena is currently in a Proof of Concept (POC) phase. The core features have been implemented but are not yet ready for production environments.
 
 ### Implemented Features
 - ✅ Core KnownRisk data model and lifecycle management
@@ -58,35 +58,35 @@ Kyra is currently in a Proof of Concept (POC) phase. The core features have been
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/PypNetty/Kyra.git
-   cd Kyra
+   git clone https://github.com/PypNetty/Kytena.git
+   cd Kytena
    ```
 
 2. Build the binary:
    ```bash
-   go build -o kyra cmd/kyra/main.go
+   go build -o kytena cmd/kyra/main.go
    ```
 
-3. Run Kyra:
+3. Run Kytena:
    ```bash
-   ./kyra --help
+   ./kytena --help
    ```
 
 ### Quick Start Guide
 
 1. **Scan for vulnerabilities**:
    ```bash
-   ./kyra scan --accept-proposed
+   ./kytena scan --accept-proposed
    ```
 
 2. **View your security dashboard**:
    ```bash
-   ./kyra dashboard
+   ./kytena dashboard
    ```
 
 3. **Monitor for expired risks**:
    ```bash
-   ./kyra monitor
+   ./kytena monitor
    ```
 
 ## Documentation
@@ -100,9 +100,9 @@ Kyra is currently in a Proof of Concept (POC) phase. The core features have been
 ### Project Structure
 
 ```
-kyra/
+kytena/
 ├── cmd/               # Command-line entry points
-│   └── kyra/          
+│   └── kytena/          
 │       └── main.go    # Main entry point
 ├── internal/          # Private application code
 │   ├── cli/           # CLI components
@@ -120,13 +120,13 @@ kyra/
 
 ### Key Commands
 
-- **List KnownRisks**: `./kyra list`
-- **Create KnownRisk**: `./kyra create`
-- **View KnownRisk**: `./kyra get <id>`
-- **Update KnownRisk**: `./kyra update <id>`
-- **Run Security Scan**: `./kyra scan`
-- **View Dashboard**: `./kyra dashboard`
-- **Start Monitor**: `./kyra monitor`
+- **List KnownRisks**: `./kytena list`
+- **Create KnownRisk**: `./kytena create`
+- **View KnownRisk**: `./kytena get <id>`
+- **Update KnownRisk**: `./kytena update <id>`
+- **Run Security Scan**: `./kytena scan`
+- **View Dashboard**: `./kytena dashboard`
+- **Start Monitor**: `./kytena monitor`
 
 ## Contributing
 
