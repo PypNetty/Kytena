@@ -1,0 +1,27 @@
+# Binaire compilé
+/kyra
+/bin/
+
+# Répertoire de données locales (KnownRisks YAML)
+data/
+
+# Fichiers de logs
+logs/
+
+# Répertoires temporaires
+tmp/
+*.tmp
+
+# Fichiers Go spécifiques
+*.out
+*.test
+
+# Fichiers système / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Fichiers de configuration utilisateur
+.env
+*.local
