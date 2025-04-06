@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/PypNetty/Kyra/internal/workload"
+	"github.com/PypNetty/Kytena/internal/workload"
 )
 
 // createTestRepository crée un repository temporaire pour les tests

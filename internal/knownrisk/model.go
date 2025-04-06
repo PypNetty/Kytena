@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/PypNetty/Kyra/internal/workload"
+	"github.com/PypNetty/Kytena/internal/workload"
 	"github.com/google/uuid"
 )
 

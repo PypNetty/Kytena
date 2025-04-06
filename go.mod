@@ -1,4 +1,4 @@
-module github.com/PypNetty/Kyra
+module github.com/PypNetty/Kytena
 
 go 1.24.1
 

@@ -1,4 +1,4 @@
-# Kyra Architecture Documentation
+# Kytena Architecture Documentation
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -11,7 +11,7 @@
 
 ## Overview
 
-Kyra is an intelligent security orchestrator for Kubernetes that manages the lifecycle of known security risks with traceability and automatic reevaluation. Its primary purpose is to provide a framework for documenting, tracking, and managing accepted security exceptions in Kubernetes environments.
+Kytena is an intelligent security orchestrator for Kubernetes that manages the lifecycle of known security risks with traceability and automatic reevaluation. Its primary purpose is to provide a framework for documenting, tracking, and managing accepted security exceptions in Kubernetes environments.
 
 The architecture is designed around a central concept: the **KnownRisk**. This represents a security vulnerability or risk that has been identified, evaluated, and explicitly accepted for a limited period of time.
 
@@ -25,7 +25,7 @@ The system follows a modular design with several key components:
 ## Core Concepts
 
 ### KnownRisk
-A KnownRisk is the fundamental entity in Kyra, representing an acknowledged security vulnerability that is temporarily accepted. Each KnownRisk includes:
+A KnownRisk is the fundamental entity in Kytena, representing an acknowledged security vulnerability that is temporarily accepted. Each KnownRisk includes:
 
 - Unique identifier
 - Reference to the affected vulnerability (e.g., CVE number)
@@ -193,7 +193,7 @@ The system is composed of the following key components:
 
 ## Integration Points
 
-Kyra is designed to integrate with several external systems:
+Kytena is designed to integrate with several external systems:
 
 ### Vulnerability Scanners
 - Integration with container image scanners (e.g., Trivy)

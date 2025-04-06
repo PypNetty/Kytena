@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/PypNetty/Kyra/internal/knownrisk"
+	"github.com/PypNetty/Kytena/internal/knownrisk"
 )
 
 type PeriodicReevaluator struct {

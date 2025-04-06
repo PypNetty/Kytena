@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/PypNetty/Kyra/internal/knownrisk"
+	"github.com/PypNetty/Kytena/internal/knownrisk"
 	"github.com/spf13/cobra"
 )
 

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/PypNetty/Kyra/internal/workload"
+	"github.com/PypNetty/Kytena/internal/workload"
 )
 
 func TestNewKnownRisk(t *testing.T) {

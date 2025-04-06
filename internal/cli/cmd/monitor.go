@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/PypNetty/Kyra/internal/knownrisk"
-	"github.com/PypNetty/Kyra/internal/reevaluator"
+	"github.com/PypNetty/Kytena/internal/knownrisk"
+	"github.com/PypNetty/Kytena/internal/reevaluator"
 	"github.com/spf13/cobra"
 )
 

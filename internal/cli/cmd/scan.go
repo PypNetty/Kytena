@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PypNetty/Kyra/internal/knownrisk"
-	"github.com/PypNetty/Kyra/internal/scanner"
+	"github.com/PypNetty/Kytena/internal/knownrisk"
+	"github.com/PypNetty/Kytena/internal/scanner"
 	"github.com/spf13/cobra"
 )
 

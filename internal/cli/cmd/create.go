@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PypNetty/Kyra/internal/knownrisk"
-	"github.com/PypNetty/Kyra/internal/workload"
+	"github.com/PypNetty/Kytena/internal/knownrisk"
+	"github.com/PypNetty/Kytena/internal/workload"
 	"github.com/spf13/cobra"
 )
 

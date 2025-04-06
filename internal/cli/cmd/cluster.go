@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/PypNetty/Kyra/internal/kubernetes"
+	"github.com/PypNetty/Kytena/internal/kubernetes"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +25,7 @@ var clusterCmd = &cobra.Command{
 	Use:   "cluster",
 	Short: "Interact with Kubernetes cluster",
 	Long: `Interact with Kubernetes cluster to discover workloads, view resources,
-and map Kubernetes resources to Kyra workloads.`,
+and map Kubernetes resources to Kytena workloads.`,
 }
 
 // workloadsCmd represents the cluster workloads command
@@ -34,7 +34,7 @@ var workloadsCmd = &cobra.Command{
 	Short: "List workloads in the Kubernetes cluster",
 	Long: `Discover and list workloads in the Kubernetes cluster.
 This command connects to the cluster using your kubeconfig
-and maps Kubernetes resources to Kyra workload models.`,
+and maps Kubernetes resources to Kytena workload models.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		clientOptions := kubernetes.ClientOptions{
 			KubeConfig: kubeconfig,

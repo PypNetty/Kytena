@@ -10,14 +10,14 @@ Kytena is an intelligent security orchestrator for Kubernetes that revolutionize
 
 ## The KnownRisk Concept
 
-The **KnownRisk** is the fundamental building block of Kyra - a documented tolerance to a security deviation with:
+The **KnownRisk** is the fundamental building block of Kytena - a documented tolerance to a security deviation with:
 - Traceability (dated, signed, documented)
 - Business and technical context
 - Defined validity period
 - Automatic reevaluation mechanism
 - Links to affected workloads
 
-When a vulnerability is detected but cannot be fixed immediately (for business, technical, or other reasons), Kyra enables documenting this decision as a KnownRisk, then automatically monitoring and reevaluating this risk over time.
+When a vulnerability is detected but cannot be fixed immediately (for business, technical, or other reasons), Kytena enables documenting this decision as a KnownRisk, then automatically monitoring and reevaluating this risk over time.
 
 ## Key Features
 

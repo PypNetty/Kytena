@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/PypNetty/Kyra/internal/knownrisk"
-	"github.com/PypNetty/Kyra/internal/workload"
+	"github.com/PypNetty/Kytena/internal/knownrisk"
+	"github.com/PypNetty/Kytena/internal/workload"
 )
 
 // ScanOrchestrator coordonne les scans de différents scanners et génère des propositions de KnownRisks

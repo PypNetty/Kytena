@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/PypNetty/Kyra/internal/workload"
+	"github.com/PypNetty/Kytena/internal/workload"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
-// WorkloadMapper maps Kubernetes resources to Kyra workload models
+// WorkloadMapper maps Kubernetes resources to Kytena workload models
 type WorkloadMapper struct {
 	// BusinessCriticalityLabels contains the labels used to determine business criticality
 	BusinessCriticalityLabels []string
@@ -74,7 +74,7 @@ func (m *WorkloadMapper) GetBusinessCriticality(labels map[string]string) int {
 	return m.DefaultBusinessCriticality
 }
 
-// MapDeploymentToWorkload maps a Kubernetes Deployment to a Kyra Workload
+// MapDeploymentToWorkload maps a Kubernetes Deployment to a Kytena Workload
 func (m *WorkloadMapper) MapDeploymentToWorkload(deployment appsv1.Deployment) workload.Workload {
 	images := getContainerImages(deployment.Spec.Template)
 	primaryImage := ""
@@ -95,7 +95,7 @@ func (m *WorkloadMapper) MapDeploymentToWorkload(deployment appsv1.Deployment) w
 	)
 }
 
-// MapStatefulSetToWorkload maps a Kubernetes StatefulSet to a Kyra Workload
+// MapStatefulSetToWorkload maps a Kubernetes StatefulSet to a Kytena Workload
 func (m *WorkloadMapper) MapStatefulSetToWorkload(statefulSet appsv1.StatefulSet) workload.Workload {
 	images := getContainerImages(statefulSet.Spec.Template)
 	primaryImage := ""
@@ -116,7 +116,7 @@ func (m *WorkloadMapper) MapStatefulSetToWorkload(statefulSet appsv1.StatefulSet
 	)
 }
 
-// MapDaemonSetToWorkload maps a Kubernetes DaemonSet to a Kyra Workload
+// MapDaemonSetToWorkload maps a Kubernetes DaemonSet to a Kytena Workload
 func (m *WorkloadMapper) MapDaemonSetToWorkload(daemonSet appsv1.DaemonSet) workload.Workload {
 	images := getContainerImages(daemonSet.Spec.Template)
 	primaryImage := ""
@@ -137,7 +137,7 @@ func (m *WorkloadMapper) MapDaemonSetToWorkload(daemonSet appsv1.DaemonSet) work
 	)
 }
 
-// MapJobToWorkload maps a Kubernetes Job to a Kyra Workload
+// MapJobToWorkload maps a Kubernetes Job to a Kytena Workload
 func (m *WorkloadMapper) MapJobToWorkload(job batchv1.Job) workload.Workload {
 	images := getContainerImages(job.Spec.Template)
 	primaryImage := ""
@@ -158,7 +158,7 @@ func (m *WorkloadMapper) MapJobToWorkload(job batchv1.Job) workload.Workload {
 	)
 }
 
-// MapCronJobToWorkload maps a Kubernetes CronJob to a Kyra Workload
+// MapCronJobToWorkload maps a Kubernetes CronJob to a Kytena Workload
 func (m *WorkloadMapper) MapCronJobToWorkload(cronJob batchv1.CronJob) workload.Workload {
 	images := getContainerImages(cronJob.Spec.JobTemplate.Spec.Template)
 	primaryImage := ""
@@ -179,7 +179,7 @@ func (m *WorkloadMapper) MapCronJobToWorkload(cronJob batchv1.CronJob) workload.
 	)
 }
 
-// MapPodToWorkload maps a Kubernetes Pod to a Kyra Workload
+// MapPodToWorkload maps a Kubernetes Pod to a Kytena Workload
 func (m *WorkloadMapper) MapPodToWorkload(pod corev1.Pod) workload.Workload {
 	var images []string
 

@@ -1,4 +1,4 @@
-# Kyra Usage Guide
+# Kytena Usage Guide
 
 ## Table of Contents
 1. [Installation](#installation)
@@ -19,8 +19,8 @@
 ### Building from Source
 1. Clone the repository:
    ```bash
-   git clone https://github.com/PypNetty/Kyra.git
-   cd Kyra
+   git clone https://github.com/PypNetty/Kytena.git
+   cd Kytena
    ```
 
 2. Build the binary:
@@ -34,13 +34,13 @@
    ```
 
 ### Directory Structure
-Kyra uses the following directories:
+Kytena uses the following directories:
 - `data/knownrisks/`: Storage location for KnownRisk YAML files
 - `logs/`: Location for logs and notification records
 
 ## Basic Commands
 
-Kyra offers a command-line interface with various commands:
+Kytena offers a command-line interface with various commands:
 
 ### Getting Help
 ```bash
@@ -126,7 +126,7 @@ kyra delete abc123 --force
 
 ## Scanning for Vulnerabilities
 
-Kyra can simulate vulnerability scanning to identify security issues:
+Kytena can simulate vulnerability scanning to identify security issues:
 
 ```bash
 # Run a basic scan
@@ -228,7 +228,7 @@ kyra get abc123 --output=text
 ### Common Issues
 
 #### Command Not Found
-If you get "command not found" when trying to run Kyra, ensure:
+If you get "command not found" when trying to run Kytena, ensure:
 - The binary is built correctly
 - The binary is in your PATH or you're using the correct path
 

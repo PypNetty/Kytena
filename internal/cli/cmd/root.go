@@ -15,8 +15,8 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "kyra",
-	Short: "Kyra - Intelligent Kubernetes Security Orchestrator",
-	Long: `Kyra is an intelligent security orchestrator for Kubernetes that manages the lifecycle of known security risks (KnownRisks) with tracability and automatic reevalutation. It provides a way to document, track, and manage accepted security exceptions
+	Short: "Kytena - Intelligent Kubernetes Security Orchestrator",
+	Long: `Kytena is an intelligent security orchestrator for Kubernetes that manages the lifecycle of known security risks (KnownRisks) with tracability and automatic reevalutation. It provides a way to document, track, and manage accepted security exceptions
 in your Kubernetes environments.`,
 }
 

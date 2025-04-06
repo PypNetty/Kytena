@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/PypNetty/Kyra/internal/workload"
+	"github.com/PypNetty/Kytena/internal/workload"
 )
 
 // Discovery is responsible for discovering Kubernetes workloads
@@ -38,7 +38,7 @@ func NewDiscovery(client *Client, mapper *WorkloadMapper) *Discovery {
 	}
 }
 
-// DiscoverWorkloads discovers Kubernetes workloads and converts them to Kyra Workload models
+// DiscoverWorkloads discovers Kubernetes workloads and converts them to Kytena Workload models
 func (d *Discovery) DiscoverWorkloads(ctx context.Context, options DiscoveryOptions) ([]workload.Workload, error) {
 	var workloads []workload.Workload
 	var mutex sync.Mutex
