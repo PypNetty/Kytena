@@ -9,6 +9,7 @@ import (
 
 	"github.com/PypNetty/Kytena/internal/knownrisk"
 	"github.com/PypNetty/Kytena/internal/scanner"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -21,15 +22,38 @@ var (
 	scanIgnoreExisting bool
 	scanAcceptProposed bool
 	scanTimeout        int
+	// Trivy specific flags
+	trivyPath           string
+	trivyNoCache        bool
+	trivyCachePath      string
+	trivyUpdateDB       bool
+	trivySkipFileSystem bool
+	trivyCustomArgs     string
 )
 
 // scanCmd represents the scan command
 var scanCmd = &cobra.Command{
 	Use:   "scan",
-	Short: "Run security scans using simulated scanners",
-	Long: `Run security scans on your Kubernetes workloads using simulated scanners. 
-This command will simulate scanning your workloads for vulnerabilities and runtime issues,
-and will provide recommendations for KnownRisks based on the findings.`,
+	Short: "Run security scans on Kubernetes workloads",
+	Long: `Run security scans on your Kubernetes workloads using Trivy and Falco.
+This command will scan your workloads for vulnerabilities and runtime issues,
+and will provide recommendations for KnownRisks based on the findings.
+
+Examples:
+  # Scan all workloads with default settings
+  kytena scan
+
+  # Scan workloads in a specific namespace
+  kytena scan --namespace production
+
+  # Only show critical and high severity vulnerabilities
+  kytena scan --min-severity High
+
+  # Update Trivy database before scanning
+  kytena scan --trivy-update-db
+
+  # Use a custom path for Trivy
+  kytena scan --trivy-path /usr/local/bin/trivy`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Create repository
 		repo, err := knownrisk.NewFileRepository(GetDataDir())
@@ -40,8 +64,11 @@ and will provide recommendations for KnownRisks based on the findings.`,
 		// Create scanner registry
 		registry := scanner.NewVulnerabilityScannerRegistry()
 
-		// Register scanners
-		registry.RegisterScanner(scanner.NewTrivyScanner())
+		// Configure and register Trivy scanner
+		trivyScanner := configureTrivyScanner()
+		registry.RegisterScanner(trivyScanner)
+
+		// Register Falco scanner if enabled
 		registry.RegisterScanner(scanner.NewFalcoScanner())
 
 		// Create scan orchestrator
@@ -52,6 +79,10 @@ and will provide recommendations for KnownRisks based on the findings.`,
 			MinimumSeverity: scanner.MapSeverity(scanMinSeverity),
 			MaxFindings:     scanMaxResults,
 			Timeout:         time.Duration(scanTimeout) * time.Second,
+			ScannerSpecific: map[string]interface{}{
+				"updateDB":       trivyUpdateDB,
+				"skipFileSystem": trivySkipFileSystem,
+			},
 		}
 
 		// Add namespace filter if specified
@@ -98,14 +129,53 @@ and will provide recommendations for KnownRisks based on the findings.`,
 func init() {
 	rootCmd.AddCommand(scanCmd)
 
-	// Add flags
+	// Add general scan flags
 	scanCmd.Flags().StringVar(&scanMinSeverity, "min-severity", "Low", "Minimum severity (Critical, High, Medium, Low)")
 	scanCmd.Flags().StringVar(&scanNamespace, "namespace", "", "Filter by namespace (comma-separated)")
 	scanCmd.Flags().StringVar(&scanWorkload, "workload", "", "Filter by workload name (comma-separated)")
 	scanCmd.Flags().IntVar(&scanMaxResults, "max-results", 100, "Maximum number of findings to display")
 	scanCmd.Flags().BoolVar(&scanIgnoreExisting, "ignore-existing", false, "Ignore findings that are already covered by existing KnownRisks")
 	scanCmd.Flags().BoolVar(&scanAcceptProposed, "accept-proposed", false, "Automatically accept proposed KnownRisks")
-	scanCmd.Flags().IntVar(&scanTimeout, "timeout", 60, "Scan timeout in seconds")
+	scanCmd.Flags().IntVar(&scanTimeout, "timeout", 300, "Scan timeout in seconds")
+
+	// Add Trivy-specific flags
+	scanCmd.Flags().StringVar(&trivyPath, "trivy-path", "trivy", "Path to Trivy executable")
+	scanCmd.Flags().BoolVar(&trivyNoCache, "trivy-no-cache", false, "Disable Trivy cache")
+	scanCmd.Flags().StringVar(&trivyCachePath, "trivy-cache-path", ".trivy-cache", "Path for Trivy cache directory")
+	scanCmd.Flags().BoolVar(&trivyUpdateDB, "trivy-update-db", false, "Update Trivy vulnerability database before scanning")
+	scanCmd.Flags().BoolVar(&trivySkipFileSystem, "trivy-skip-fs", false, "Skip filesystem scanning and only scan container images")
+	scanCmd.Flags().StringVar(&trivyCustomArgs, "trivy-args", "", "Custom arguments passed to Trivy (comma-separated)")
+}
+
+// configureTrivyScanner creates and configures the Trivy scanner
+func configureTrivyScanner() scanner.VulnerabilityScanner {
+	log.Info("Configuring Trivy scanner...")
+
+	// Create a new Trivy scanner
+	trivyScanner := scanner.NewTrivyScanner()
+
+	// Prepare configuration
+	config := map[string]interface{}{
+		"binaryPath":     trivyPath,
+		"minSeverity":    scanMinSeverity,
+		"cacheEnabled":   !trivyNoCache,
+		"cachePath":      trivyCachePath,
+		"timeoutSeconds": scanTimeout,
+	}
+
+	// Parse and add custom arguments if provided
+	if trivyCustomArgs != "" {
+		config["extraArgs"] = strings.Split(trivyCustomArgs, ",")
+	}
+
+	// Configure the scanner
+	err := trivyScanner.SetConfig(config)
+	if err != nil {
+		log.Warnf("Error configuring Trivy scanner: %v", err)
+		log.Warn("Will use default configuration")
+	}
+
+	return trivyScanner
 }
 
 // displayScanSummary displays a summary of scan results
@@ -201,7 +271,15 @@ func displayFindings(result *scanner.OrchestratedScanResult, ignoreExisting bool
 			if IsVerbose() {
 				fmt.Printf("   Description: %s\n", finding.Description)
 				if len(finding.References) > 0 {
-					fmt.Printf("   References: %s\n", strings.Join(finding.References, ", "))
+					fmt.Printf("   References: %s\n", strings.Join(finding.References[:min(3, len(finding.References))], ", "))
+					if len(finding.References) > 3 {
+						fmt.Printf("               ... and %d more references\n", len(finding.References)-3)
+					}
+				}
+
+				// Display CVSS score if available
+				if cvssScore, ok := finding.Metadata["cvssScore"].(float64); ok && cvssScore > 0 {
+					fmt.Printf("   CVSS Score: %.1f\n", cvssScore)
 				}
 			}
 
@@ -209,6 +287,14 @@ func displayFindings(result *scanner.OrchestratedScanResult, ignoreExisting bool
 			displayCount++
 		}
 	}
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // displayProposedActions displays proposed KnownRisks
