@@ -1,7 +1,14 @@
 # Binaire compilé
 /kytena
 /bin/
+# Trivy cache & DB
+**/trivy.db
+**/fanal.db
+**/metadata.json
+**/trivy-java.db
 
+# Cache directory (si tu utilises un répertoire dédié)
+.trivy-cache/
 # Répertoire de données locales (KnownRisks YAML)
 data/
 
