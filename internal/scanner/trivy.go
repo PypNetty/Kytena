@@ -209,11 +209,108 @@ func (s *TrivyScanner) Scan(ctx context.Context, options ScanOptions) (*ScanResu
 	return result, nil
 }
 
-func isSeverityAtLeast(vulnerabilitySeverity1, vulnerabilitySeverity2 VulnerabilitySeverity) bool {
-	panic("unimplemented")
+// isSeverityAtLeast vérifie si une sévérité est au moins aussi élevée qu'une autre
+func isSeverityAtLeast(actual, minimum VulnerabilitySeverity) bool {
+	severityRank := map[VulnerabilitySeverity]int{
+		SeverityCritical: 4,
+		SeverityHigh:     3,
+		SeverityMedium:   2,
+		SeverityLow:      1,
+		SeverityUnknown:  0,
+	}
+
+	actualRank, ok1 := severityRank[actual]
+	minimumRank, ok2 := severityRank[minimum]
+
+	if !ok1 || !ok2 {
+		// Si une des sévérités n'est pas reconnue, considérer qu'elle est inférieure
+		return false
+	}
+
+	return actualRank >= minimumRank
 }
+
+// simulateWorkloads génère une liste de workloads simulés pour les tests
 func simulateWorkloads(options ScanOptions) []simulatedWorkload {
-	panic("unimplemented")
+	// Liste de workloads par défaut pour les tests
+	defaultWorkloads := []simulatedWorkload{
+		{Name: "frontend", Namespace: "default", Type: "Deployment", Image: "nginx:1.21.6"},
+		{Name: "api", Namespace: "default", Type: "Deployment", Image: "node:16.19.1"},
+		{Name: "database", Namespace: "default", Type: "StatefulSet", Image: "mysql:8.0.31"},
+		{Name: "cache", Namespace: "default", Type: "Deployment", Image: "redis:6.2.10"},
+		{Name: "auth", Namespace: "security", Type: "Deployment", Image: "openjdk:17.0.5"},
+	}
+
+	// Si une image de test est spécifiée dans les options, l'utiliser
+	if testImage, ok := options.ScannerSpecific["testImage"].(string); ok && testImage != "" {
+		return []simulatedWorkload{
+			{Name: "test-workload", Namespace: "test", Type: "Deployment", Image: testImage},
+		}
+	}
+
+	// Filtrer les workloads selon les options
+	var result []simulatedWorkload
+	for _, wl := range defaultWorkloads {
+		// Filtrer par namespace si spécifié
+		if len(options.IncludeNamespaces) > 0 {
+			included := false
+			for _, ns := range options.IncludeNamespaces {
+				if wl.Namespace == ns {
+					included = true
+					break
+				}
+			}
+			if !included {
+				continue
+			}
+		}
+
+		// Filtrer par namespace exclu
+		if len(options.ExcludeNamespaces) > 0 {
+			excluded := false
+			for _, ns := range options.ExcludeNamespaces {
+				if wl.Namespace == ns {
+					excluded = true
+					break
+				}
+			}
+			if excluded {
+				continue
+			}
+		}
+
+		// Filtrer par workload si spécifié
+		if len(options.IncludeWorkloads) > 0 {
+			included := false
+			for _, name := range options.IncludeWorkloads {
+				if wl.Name == name {
+					included = true
+					break
+				}
+			}
+			if !included {
+				continue
+			}
+		}
+
+		// Filtrer par workload exclu
+		if len(options.ExcludeWorkloads) > 0 {
+			excluded := false
+			for _, name := range options.ExcludeWorkloads {
+				if wl.Name == name {
+					excluded = true
+					break
+				}
+			}
+			if excluded {
+				continue
+			}
+		}
+
+		result = append(result, wl)
+	}
+
+	return result
 }
 
 type simulatedWorkload struct {
