@@ -20,6 +20,10 @@ type Client struct {
 	clientset *kubernetes.Clientset
 }
 
+func (c *Client) GetClientset() *kubernetes.Clientset {
+	return c.clientset
+}
+
 // ClientOptions contains options for creating a new Kubernetes client
 type ClientOptions struct {
 	// KubeConfig is the path to the kubeconfig file
@@ -65,6 +69,22 @@ func NewClient(options ClientOptions) (*Client, error) {
 	return &Client{
 		clientset: clientset,
 	}, nil
+}
+
+// CreateClientFromConfig crée un nouveau client Kubernetes à partir d'un fichier kubeconfig
+func CreateClientFromConfig(kubeconfigPath string) (*Client, error) {
+	options := ClientOptions{
+		KubeConfig: kubeconfigPath,
+		InCluster:  false,
+	}
+
+	return NewClient(options)
+}
+
+// IsConnected vérifie si le client est connecté au cluster Kubernetes
+func (c *Client) IsConnected() bool {
+	_, err := c.clientset.ServerVersion()
+	return err == nil
 }
 
 // GetNamespaces returns a list of all namespaces

@@ -44,7 +44,8 @@ func createTestKnownRisk() *KnownRisk {
 		*w,
 		"Test justification",
 		"security-team@example.com",
-		time.Now().Add(24*time.Hour),
+		time.Now(),                   // createdAt
+		time.Now().Add(24*time.Hour), // expiresAt
 		SeverityHigh,
 	)
 }

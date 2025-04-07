@@ -74,6 +74,10 @@ Examples:
 		// Create scan orchestrator
 		orchestrator := scanner.NewScanOrchestrator(registry, repo)
 
+		// Get Kubernetes flags
+		useRealK8s, _ := cmd.Flags().GetBool("use-real-k8s")
+		kubeconfig, _ := cmd.Flags().GetString("kubeconfig")
+
 		// Prepare scan options
 		options := scanner.ScanOptions{
 			MinimumSeverity: scanner.MapSeverity(scanMinSeverity),
@@ -82,7 +86,13 @@ Examples:
 			ScannerSpecific: map[string]interface{}{
 				"updateDB":       trivyUpdateDB,
 				"skipFileSystem": trivySkipFileSystem,
+				"useRealK8s":     useRealK8s,
 			},
+		}
+
+		// Add kubeconfig if specified
+		if kubeconfig != "" {
+			options.ScannerSpecific["kubeconfig"] = kubeconfig
 		}
 
 		// Add namespace filter if specified
@@ -145,6 +155,10 @@ func init() {
 	scanCmd.Flags().BoolVar(&trivyUpdateDB, "trivy-update-db", false, "Update Trivy vulnerability database before scanning")
 	scanCmd.Flags().BoolVar(&trivySkipFileSystem, "trivy-skip-fs", false, "Skip filesystem scanning and only scan container images")
 	scanCmd.Flags().StringVar(&trivyCustomArgs, "trivy-args", "", "Custom arguments passed to Trivy (comma-separated)")
+
+	// Ajout des nouveaux flags pour Kubernetes
+	scanCmd.Flags().Bool("use-real-k8s", false, "Use real Kubernetes workloads instead of simulated ones")
+	scanCmd.Flags().String("kubeconfig", "", "Path to kubeconfig file (defaults to ~/.kube/config)")
 }
 
 // configureTrivyScanner creates and configures the Trivy scanner
@@ -356,4 +370,21 @@ func acceptProposedKnownRisks(proposals []scanner.ProposedKnownRisk, repo knownr
 		fmt.Printf(" %d errors occurred.", errorCount)
 	}
 	fmt.Println()
+}
+
+// GetDataDir returns the data directory path
+func GetDataDir() string {
+	// Implement this according to your application's needs
+	return "data"
+}
+
+// Fatal prints an error message and exits the application
+func Fatal(format string, args ...interface{}) {
+	log.Fatalf(format, args...)
+}
+
+// IsVerbose returns whether verbose output is enabled
+func IsVerbose() bool {
+	// Implement this according to your application's needs
+	return true
 }
