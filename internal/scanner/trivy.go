@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -244,7 +245,7 @@ func simulateWorkloads(options ScanOptions) []simulatedWorkload {
 	// Si une image de test est spécifiée dans les options, l'utiliser
 	if testImage, ok := options.ScannerSpecific["testImage"].(string); ok && testImage != "" {
 		return []simulatedWorkload{
-			{Name: "test-workload", Namespace: "test", Type: "Deployment", Image: testImage},
+			{Name: "test-nginx", Namespace: "test", Type: "Deployment", Image: testImage},
 		}
 	}
 
@@ -321,7 +322,7 @@ type simulatedWorkload struct {
 }
 
 func (s *TrivyScanner) scanImage(ctx context.Context, image string, workload simulatedWorkload, _ ScanOptions) ([]VulnerabilityFinding, error) {
-	log.Infof("Scanning image %s with Trivy", image)
+	log.Infof("Kytena TrivyScanner executing scan for image: %s (workload: %s/%s)", image, workload.Namespace, workload.Name)
 
 	// Créer un contexte avec timeout
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, s.timeout)
@@ -476,6 +477,8 @@ func (s *TrivyScanner) updateTrivyDB(ctx context.Context) error {
 	if s.cacheEnabled && s.cachePath != "" {
 		cmd.Args = append(cmd.Args, "--cache-dir", s.cachePath)
 	}
+
+	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
