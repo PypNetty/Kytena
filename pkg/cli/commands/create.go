@@ -16,14 +16,18 @@ import (
 
 // NewCreateCommand crée une nouvelle commande create
 func NewCreateCommand() *cobra.Command {
-	cmd := cli.NewBaseCommand(
-		"create",
-		"Create a new KnownRisk",
-		`Create a new KnownRisk entry interactively.
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a new KnownRisk",
+		Long: `Create a new KnownRisk entry interactively.
 You will be prompted to enter all necessary information.`,
-		func(cmd *cobra.Command, args []string, globalOptions cli.GlobalOptions) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			globalOptions := &cli.GlobalOptions{
+				Context: cmd.Context(),
+			}
+			// Add other global options as needed
 			// Créer le repository
-			repo, err := cli.CreateRepository(globalOptions)
+			repo, err := cli.CreateRepository(*globalOptions)
 			if err != nil {
 				return fmt.Errorf("failed to create repository: %w", err)
 			}
@@ -39,7 +43,7 @@ You will be prompted to enter all necessary information.`,
 			cli.PrintSuccess("KnownRisk created successfully with ID: %s", kr.ID)
 			return nil
 		},
-	)
+	}
 
 	return cmd.Setup()
 }

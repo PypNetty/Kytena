@@ -84,6 +84,27 @@ func Fatal(format string, args ...interface{}) {
 	os.Exit(1)
 }
 
+// DisplayScoreBar affiche une barre de score visuelle
+func DisplayScoreBar(percentage int, width int) {
+	completed := (percentage * width) / 100
+
+	fmt.Print("[")
+	for i := 0; i < width; i++ {
+		if i < completed {
+			if percentage >= 75 {
+				ErrorColor.Print("!")
+			} else if percentage >= 50 {
+				WarningColor.Print("*")
+			} else {
+				SuccessColor.Print("=")
+			}
+		} else {
+			fmt.Print(" ")
+		}
+	}
+	fmt.Println("]")
+}
+
 // AskForConfirmation demande une confirmation à l'utilisateur (y/n)
 func AskForConfirmation(prompt string) bool {
 	var response string
@@ -202,25 +223,4 @@ func RenderKnownRiskDetails(kr *models.KnownRisk) {
 	if len(kr.RelatedTickets) > 0 {
 		fmt.Printf("Related tickets: %s\n", strings.Join(kr.RelatedTickets, ", "))
 	}
-}
-
-// DisplayScoreBar affiche une barre de score visuelle
-func DisplayScoreBar(percentage int, width int) {
-	completed := (percentage * width) / 100
-
-	fmt.Print("[")
-	for i := 0; i < width; i++ {
-		if i < completed {
-			if percentage >= 75 {
-				ErrorColor.Print("!")
-			} else if percentage >= 50 {
-				WarningColor.Print("*")
-			} else {
-				SuccessColor.Print("=")
-			}
-		} else {
-			fmt.Print(" ")
-		}
-	}
-	fmt.Println("]")
 }

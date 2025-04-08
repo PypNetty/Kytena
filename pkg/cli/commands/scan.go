@@ -1,19 +1,20 @@
-// pkg/cli/commands/scan.go
 package commands
 
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/PypNetty/Kytena/pkg/cli"
+	"github.com/PypNetty/Kytena/pkg/models"
 	"github.com/PypNetty/Kytena/pkg/scanner"
+	"github.com/PypNetty/Kytena/pkg/scanner/types"
+	"github.com/PypNetty/Kytena/pkg/storage"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-// ScanOptions contient les options spécifiques à la commande scan
 type ScanOptions struct {
 	MinSeverity     string
 	Namespace       string
@@ -31,9 +32,8 @@ type ScanOptions struct {
 	TrivyCustomArgs string
 }
 
-// NewScanCommand crée une nouvelle commande de scan
-func NewScanCommand() *cobra.Command {
-	options := ScanOptions{
+func NewScanCommand(globalOpts *cli.GlobalOptions) *cobra.Command {
+	options := &ScanOptions{
 		MinSeverity:    "Low",
 		MaxResults:     100,
 		Timeout:        300,
@@ -41,209 +41,253 @@ func NewScanCommand() *cobra.Command {
 		TrivyCachePath: ".trivy-cache",
 	}
 
-	cmd := cli.NewBaseCommand(
-		"scan",
-		"Run security scans on Kubernetes workloads",
-		`Run security scans on your Kubernetes workloads using various scanners.
+	cmd := &cobra.Command{
+		Use:   "scan",
+		Short: "Run security scans on Kubernetes workloads",
+		Long: `Run security scans on your Kubernetes workloads using various scanners.
 This command will scan your workloads for vulnerabilities and runtime issues,
-and will provide recommendations for KnownRisks based on the findings.
-
-Examples:
-  # Scan all workloads with default settings
-  kytena scan
-  
-  # Scan workloads in a specific namespace
-  kytena scan --namespace production
-  
-  # Only show critical and high severity vulnerabilities
-  kytena scan --min-severity High
-  
-  # Update Trivy database before scanning
-  kytena scan --trivy-update-db
-  
-  # Use a custom path for Trivy
-  kytena scan --trivy-path /usr/local/bin/trivy`,
-		func(cmd *cobra.Command, args []string, globalOptions cli.GlobalOptions) error {
-			return runScan(cmd, args, globalOptions, options)
+and will provide recommendations for KnownRisks based on the findings.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runScan(cmd.Context(), options, globalOpts)
 		},
-	)
+	}
 
-	baseCmd := cmd.Setup()
+	flags := cmd.Flags()
+	flags.StringVar(&options.MinSeverity, "min-severity", options.MinSeverity, "Minimum severity (Critical, High, Medium, Low)")
+	flags.StringVar(&options.Namespace, "namespace", "", "Filter by namespace (comma-separated)")
+	flags.StringVar(&options.Workload, "workload", "", "Filter by workload name (comma-separated)")
+	flags.IntVar(&options.MaxResults, "max-results", options.MaxResults, "Maximum number of findings to display")
+	flags.BoolVar(&options.IgnoreExisting, "ignore-existing", false, "Ignore findings covered by existing KnownRisks")
+	flags.BoolVar(&options.AcceptProposed, "accept-proposed", false, "Automatically accept proposed KnownRisks")
+	flags.IntVar(&options.Timeout, "timeout", options.Timeout, "Scan timeout in seconds")
+	flags.BoolVar(&options.UseRealK8s, "use-real-k8s", false, "Use real Kubernetes cluster")
+	flags.StringVar(&options.TrivyPath, "trivy-path", options.TrivyPath, "Path to Trivy executable")
+	flags.BoolVar(&options.TrivyNoCache, "trivy-no-cache", false, "Disable Trivy cache")
+	flags.StringVar(&options.TrivyCachePath, "trivy-cache-path", options.TrivyCachePath, "Path for Trivy cache")
+	flags.BoolVar(&options.TrivyUpdateDB, "trivy-update-db", false, "Update Trivy vulnerability database")
+	flags.BoolVar(&options.TrivySkipFS, "trivy-skip-fs", false, "Skip filesystem scanning")
+	flags.StringVar(&options.TrivyCustomArgs, "trivy-args", "", "Custom arguments for Trivy (comma-separated)")
 
-	// Ajouter les flags spécifiques à la commande scan
-	baseCmd.Flags().StringVar(&options.MinSeverity, "min-severity", options.MinSeverity, "Minimum severity (Critical, High, Medium, Low)")
-	baseCmd.Flags().StringVar(&options.Namespace, "namespace", options.Namespace, "Filter by namespace (comma-separated)")
-	baseCmd.Flags().StringVar(&options.Workload, "workload", options.Workload, "Filter by workload name (comma-separated)")
-	baseCmd.Flags().IntVar(&options.MaxResults, "max-results", options.MaxResults, "Maximum number of findings to display")
-	baseCmd.Flags().BoolVar(&options.IgnoreExisting, "ignore-existing", options.IgnoreExisting, "Ignore findings that are already covered by existing KnownRisks")
-	baseCmd.Flags().BoolVar(&options.AcceptProposed, "accept-proposed", options.AcceptProposed, "Automatically accept proposed KnownRisks")
-	baseCmd.Flags().IntVar(&options.Timeout, "timeout", options.Timeout, "Scan timeout in seconds")
-
-	// Ajouter les flags spécifiques à Trivy
-	baseCmd.Flags().StringVar(&options.TrivyPath, "trivy-path", options.TrivyPath, "Path to Trivy executable")
-	baseCmd.Flags().BoolVar(&options.TrivyNoCache, "trivy-no-cache", options.TrivyNoCache, "Disable Trivy cache")
-	baseCmd.Flags().StringVar(&options.TrivyCachePath, "trivy-cache-path", options.TrivyCachePath, "Path for Trivy cache directory")
-	baseCmd.Flags().BoolVar(&options.TrivyUpdateDB, "trivy-update-db", options.TrivyUpdateDB, "Update Trivy vulnerability database before scanning")
-	baseCmd.Flags().BoolVar(&options.TrivySkipFS, "trivy-skip-fs", options.TrivySkipFS, "Skip filesystem scanning and only scan container images")
-	baseCmd.Flags().StringVar(&options.TrivyCustomArgs, "trivy-args", options.TrivyCustomArgs, "Custom arguments passed to Trivy (comma-separated)")
-
-	// Ajouter les flags pour Kubernetes
-	baseCmd.Flags().BoolVar(&options.UseRealK8s, "use-real-k8s", options.UseRealK8s, "Use real Kubernetes workloads instead of simulated ones")
-
-	return baseCmd
+	return cmd
 }
 
-// runScan exécute la commande de scan
-func runScan(_ *cobra.Command, _ []string, globalOptions cli.GlobalOptions, options ScanOptions) error {
-	// Créer le repository
-	repo, err := cli.CreateRepository(globalOptions)
+// Wrapper pour implémenter storage.Repository
+type repositoryAdapter struct {
+	repo   *storage.FileRepository
+	logger *logrus.Logger
+}
+
+// Delete implements storage.Repository.
+func (r *repositoryAdapter) Delete(ctx context.Context, id string) error {
+	panic("unimplemented")
+}
+
+// Get implements storage.Repository.
+func (r *repositoryAdapter) Get(ctx context.Context, id string) (*models.KnownRisk, error) {
+	panic("unimplemented")
+}
+
+// GetByVulnerabilityID implements storage.Repository.
+func (r *repositoryAdapter) GetByVulnerabilityID(ctx context.Context, vulnerabilityID string) ([]*models.KnownRisk, error) {
+	panic("unimplemented")
+}
+
+// GetByWorkload implements storage.Repository.
+func (r *repositoryAdapter) GetByWorkload(ctx context.Context, namespace string, name string) ([]*models.KnownRisk, error) {
+	panic("unimplemented")
+}
+
+// Save implements storage.Repository.
+func (r *repositoryAdapter) Save(ctx context.Context, kr *models.KnownRisk) error {
+	panic("unimplemented")
+}
+
+// Update implements storage.Repository.
+func (r *repositoryAdapter) Update(ctx context.Context, kr *models.KnownRisk) error {
+	panic("unimplemented")
+}
+
+// Implémentation de storage.Repository
+func (r *repositoryAdapter) CreateKnownRisk(ctx context.Context, knownRisk *models.KnownRisk) error {
+	// Implémenter cette méthode en appelant la méthode appropriée de FileRepository
+	return r.repo.Create(ctx, knownRisk)
+}
+
+func (r *repositoryAdapter) List(ctx context.Context, options storage.ListOptions) ([]*models.KnownRisk, error) {
+	// Implémenter cette méthode en appelant la méthode appropriée de FileRepository
+	result, err := r.repo.List(ctx, options)
 	if err != nil {
-		cli.Fatal("Failed to create repository: %v", err)
+		return nil, err
 	}
 
-	// Créer le registre de scanners
-	registry := cli.CreateScannerRegistry(globalOptions)
-
-	// Configurer le scanner Trivy
-	trivyScanner, found := registry.GetScanner("Trivy")
-	if found {
-		trivyConfig := map[string]interface{}{
-			"binaryPath":     options.TrivyPath,
-			"minSeverity":    options.MinSeverity,
-			"cacheEnabled":   !options.TrivyNoCache,
-			"cachePath":      options.TrivyCachePath,
-			"timeoutSeconds": options.Timeout,
-		}
-
-		// Ajouter les arguments personnalisés si fournis
-		if options.TrivyCustomArgs != "" {
-			trivyConfig["extraArgs"] = strings.Split(options.TrivyCustomArgs, ",")
-		}
-
-		// Configurer le scanner
-		if err := trivyScanner.SetConfig(trivyConfig); err != nil {
-			globalOptions.Logger.Warnf("Error configuring Trivy scanner: %v", err)
-			globalOptions.Logger.Warn("Will use default configuration")
-		}
+	// Conversion du résultat au type attendu
+	var knownRisks []*models.KnownRisk
+	for _, item := range result.([]*models.KnownRisk) {
+		knownRisks = append(knownRisks, item)
 	}
+
+	return knownRisks, nil
+}
+
+func (r *repositoryAdapter) CountBySeverity(ctx context.Context) (map[models.Severity]int, error) {
+	// Implémentation pour compter par sévérité
+	return make(map[models.Severity]int), nil
+}
+
+func (r *repositoryAdapter) CountByStatus(ctx context.Context) (map[models.Status]int, error) {
+	// Implémentation pour compter par statut
+	return make(map[models.Status]int), nil
+}
+
+// Implémenter d'autres méthodes requises par l'interface storage.Repository
+
+func runScan(ctx context.Context, options *ScanOptions, globalOpts *cli.GlobalOptions) error {
+	// Créer le repository avec les options globales
+	repo, err := storage.NewFileRepository(globalOpts.DataDir)
+	if err != nil {
+		return fmt.Errorf("failed to create repository: %w", err)
+	}
+
+	// Ajout de l'adaptateur pour que FileRepository implémente storage.Repository
+	repoAdapter := &repositoryAdapter{
+		repo:   repo,
+		logger: globalOpts.Logger,
+	}
+
+	// Créer le registry de scanners
+	registry := scanner.NewVulnerabilityScannerRegistry()
+
+	// Création du scanner Trivy avec le logger
+	trivyScanner := scanner.NewTrivyScanner(globalOpts.Logger)
+
+	// Configure les options pour Trivy via une fonction ou un setter
+	// Si le scanner expose une méthode de configuration
+	trivyScanner.Configure(map[string]interface{}{
+		"binaryPath": options.TrivyPath,
+		"cachePath":  options.TrivyCachePath,
+		"noCache":    options.TrivyNoCache,
+		"updateDB":   options.TrivyUpdateDB,
+		"skipFS":     options.TrivySkipFS,
+		"extraArgs":  strings.Split(options.TrivyCustomArgs, ","),
+		"timeout":    time.Duration(options.Timeout) * time.Second,
+	})
+
+	registry.RegisterScanner(trivyScanner)
 
 	// Créer l'orchestrateur de scan
-	orchestrator := scanner.NewScanOrchestrator(registry, repo, globalOptions.Logger)
+	orchestrator := scanner.NewScanOrchestrator(registry, repoAdapter, globalOpts.Logger)
 
-	// Préparer les options de scan
-	scanOptions := scanner.ScanOptions{
-		MinimumSeverity: scanner.MapSeverity(options.MinSeverity),
+	// Configurer les options de scan
+	scanOptions := types.ScanOptions{
+		MinimumSeverity: types.VulnerabilitySeverity(strings.ToUpper(options.MinSeverity)),
 		MaxFindings:     options.MaxResults,
-		Timeout:         time.Duration(options.Timeout) * time.Second,
-		ScannerSpecific: map[string]interface{}{
-			"updateDB":       options.TrivyUpdateDB,
-			"skipFileSystem": options.TrivySkipFS,
-			"useRealK8s":     options.UseRealK8s,
-		},
 	}
 
-	// Ajouter le kubeconfig si spécifié
-	if globalOptions.KubeConfig != "" {
-		scanOptions.ScannerSpecific["kubeconfig"] = globalOptions.KubeConfig
-	}
-
-	// Ajouter le filtre de namespace si spécifié
 	if options.Namespace != "" {
 		scanOptions.IncludeNamespaces = strings.Split(options.Namespace, ",")
 	}
-
-	// Ajouter le filtre de workload si spécifié
 	if options.Workload != "" {
 		scanOptions.IncludeWorkloads = strings.Split(options.Workload, ",")
 	}
 
 	// Exécuter le scan
-	cli.PrintInfo("Running security scans...")
-
-	result, err := orchestrator.Scan(globalOptions.Context, scanOptions)
+	globalOpts.Logger.Info("Starting security scan...")
+	result, err := orchestrator.Scan(ctx, scanOptions)
 	if err != nil {
-		cli.Fatal("Scan failed: %v", err)
+		return fmt.Errorf("scan failed: %w", err)
 	}
-
-	// Afficher le résumé du scan
-	displayScanSummary(result)
 
 	// Afficher les résultats
+	displayScanSummary(result)
+
 	if result.Summary.TotalFindings > 0 {
 		displayFindings(result, options.IgnoreExisting, options.MaxResults)
-	}
 
-	// Afficher les actions proposées
-	if len(result.ProposedActions) > 0 {
-		displayProposedActions(result.ProposedActions)
+		if len(result.ProposedActions) > 0 {
+			displayProposedActions(result.ProposedActions)
 
-		// Accepter les actions proposées si demandé
-		if options.AcceptProposed {
-			acceptProposedKnownRisks(result.ProposedActions, repo, globalOptions.Context)
+			if options.AcceptProposed {
+				if err := acceptProposedKnownRisks(ctx, result.ProposedActions, repoAdapter); err != nil {
+					globalOpts.Logger.Errorf("Failed to accept proposed KnownRisks: %v", err)
+				}
+			}
 		}
 	}
 
 	return nil
 }
 
-// displayScanSummary affiche un résumé des résultats du scan
 func displayScanSummary(result *scanner.OrchestratedScanResult) {
-	fmt.Println("\n=== Scan Summary ===")
-	fmt.Printf("Scan completed in %.2f seconds\n", result.EndTime.Sub(result.StartTime).Seconds())
-	fmt.Printf("Total findings: %d\n", result.Summary.TotalFindings)
+	fmt.Printf("\nScan completed in %.2f seconds\n", result.EndTime.Sub(result.StartTime).Seconds())
+	fmt.Printf("Total findings: %d\n\n", result.Summary.TotalFindings)
 
-	// Afficher les résultats par sévérité
-	fmt.Println("\nFindings by severity:")
-	for _, severity := range []scanner.VulnerabilitySeverity{
-		scanner.SeverityCritical, scanner.SeverityHigh,
-		scanner.SeverityMedium, scanner.SeverityLow, scanner.SeverityUnknown} {
-		count := result.Summary.FindingsBySeverity[severity]
-		if count > 0 {
-			fmt.Printf(" %s: %d\n", severity, count)
+	if result.Summary.TotalFindings > 0 {
+		fmt.Println("Findings by severity:")
+		for _, sev := range []types.VulnerabilitySeverity{
+			types.SeverityCritical,
+			types.SeverityHigh,
+			types.SeverityMedium,
+			types.SeverityLow,
+		} {
+			if count := result.Summary.FindingsBySeverity[sev]; count > 0 {
+				fmt.Printf("  %s: %d\n", sev, count)
+			}
 		}
 	}
-
-	// Afficher les résultats par scanner
-	fmt.Println("\nFindings by scanner:")
-	for scanner, count := range result.Summary.FindingsByScanner {
-		fmt.Printf(" %s: %d\n", scanner, count)
-	}
-
-	// Afficher les résultats par namespace
-	fmt.Println("\nFindings by namespace:")
-	var namespaces []string
-	for namespace := range result.Summary.FindingsByNamespace {
-		namespaces = append(namespaces, namespace)
-	}
-	sort.Strings(namespaces)
-	for _, namespace := range namespaces {
-		fmt.Printf(" %s: %d\n", namespace, result.Summary.FindingsByNamespace[namespace])
-	}
-
-	// Afficher le nombre d'actions proposées
-	fmt.Printf("\nProposed KnownRisks: %d\n", len(result.ProposedActions))
 }
 
-// displayFindings affiche les résultats des vulnérabilités
 func displayFindings(result *scanner.OrchestratedScanResult, ignoreExisting bool, maxResults int) {
-	fmt.Println("\n=== Vulnerability Findings ===")
+	displayed := 0
+	for _, finding := range result.AllFindings {
+		// Vérification si on doit ignorer ce finding
+		if ignoreExisting {
+			// Si le finding doit être ignoré, vérifier si une des propositions d'action
+			// est basée sur un KnownRisk existant
+			shouldIgnore := false
+			for _, prop := range result.ProposedActions {
+				if prop.Finding.ID == finding.ID {
+					// Vérifier si c'est déjà couvert
+					// Noter que nous devons adapter cette logique selon la structure réelle
+					shouldIgnore = true
+					break
+				}
+			}
 
-	// Code pour afficher les résultats
-	// ...
+			if shouldIgnore {
+				continue
+			}
+		}
+
+		if maxResults > 0 && displayed >= maxResults {
+			break
+		}
+
+		fmt.Printf("\nFinding: %s\n", finding.Title)
+		fmt.Printf("Severity: %s\n", finding.Severity)
+		fmt.Printf("Location: %s/%s\n", finding.Namespace, finding.ResourceID)
+		fmt.Printf("Description: %s\n", finding.Description)
+
+		displayed++
+	}
 }
 
-// displayProposedActions affiche les KnownRisks proposés
 func displayProposedActions(proposals []scanner.ProposedKnownRisk) {
-	fmt.Println("\n=== Proposed KnownRisks ===")
-
-	// Code pour afficher les propositions
-	// ...
+	fmt.Printf("\nProposed actions (%d):\n", len(proposals))
+	for i, prop := range proposals {
+		fmt.Printf("\n%d. %s\n", i+1, prop.Finding.Title)
+		fmt.Printf("   Severity: %s\n", prop.Finding.Severity)
+		fmt.Printf("   Impact Score: %.2f\n", prop.CriticalityScore)
+		fmt.Printf("   Expires in: %d days\n", prop.ExpiryDays)
+		fmt.Printf("   Justification: %s\n", prop.Justification)
+	}
 }
 
-// acceptProposedKnownRisks enregistre les KnownRisks proposés dans le repository
-func acceptProposedKnownRisks(proposals []scanner.ProposedKnownRisk, repo storage.Repository, ctx context.Context) {
-	fmt.Println("\n=== Accepting Proposed KnownRisks ===")
-
-	// Code pour accepter les propositions
-	// ...
+func acceptProposedKnownRisks(ctx context.Context, proposals []scanner.ProposedKnownRisk, repo storage.Repository) error {
+	for _, prop := range proposals {
+		// Utiliser la méthode Save pour enregistrer les KnownRisks
+		if err := repo.Save(ctx, prop.KnownRisk); err != nil {
+			return fmt.Errorf("failed to create KnownRisk for %s: %w", prop.Finding.Title, err)
+		}
+	}
+	return nil
 }

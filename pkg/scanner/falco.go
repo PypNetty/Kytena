@@ -1,4 +1,3 @@
-// pkg/scanner/falco.go
 package scanner
 
 import (
@@ -8,15 +7,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PypNetty/Kytena/pkg/scanner/types"
 	"github.com/sirupsen/logrus"
 )
 
 // Alertes communes de comportements suspects dans Kubernetes
 var commonRuntimeAlerts = []struct {
-	ID          strin
+	ID          string
 	Title       string
 	Description string
-	Severity    VulnerabilitySeverity
+	Severity    types.VulnerabilitySeverity
 	Rule        string
 	References  []string
 }{
@@ -24,7 +24,7 @@ var commonRuntimeAlerts = []struct {
 		ID:          "FALCO-01-001",
 		Title:       "Suspicious Shell in Container",
 		Description: "A shell was spawned in a container with an attached terminal, which may indicate an interactive compromise.",
-		Severity:    SeverityHigh,
+		Severity:    types.SeverityHigh,
 		Rule:        "Terminal Shell in Container",
 		References:  []string{"https://falco.org/docs/rules/default-rules/#shell-in-container"},
 	},
@@ -32,7 +32,7 @@ var commonRuntimeAlerts = []struct {
 		ID:          "FALCO-01-002",
 		Title:       "Sensitive File Access",
 		Description: "A process in a container accessed a sensitive file like /etc/shadow, which is unusual behavior.",
-		Severity:    SeverityHigh,
+		Severity:    types.SeverityHigh,
 		Rule:        "Read Sensitive File",
 		References:  []string{"https://falco.org/docs/rules/default-rules/#read-sensitive-file-untrusted"},
 	},
@@ -40,7 +40,7 @@ var commonRuntimeAlerts = []struct {
 		ID:          "FALCO-01-003",
 		Title:       "Outbound Network Connection from Database Container",
 		Description: "A database container is making an unexpected outbound network connection, potentially exfiltrating data.",
-		Severity:    SeverityCritical,
+		Severity:    types.SeverityCritical,
 		Rule:        "Unexpected Outbound Connection",
 		References:  []string{"https://falco.org/docs/rules/default-rules/#unexpected-outbound-connection"},
 	},
@@ -48,7 +48,7 @@ var commonRuntimeAlerts = []struct {
 		ID:          "FALCO-01-004",
 		Title:       "Package Management Execution",
 		Description: "A package management tool (apt, yum, etc.) was executed in a container, which may indicate an attacker installing tools.",
-		Severity:    SeverityMedium,
+		Severity:    types.SeverityMedium,
 		Rule:        "Package Management Executed",
 		References:  []string{"https://falco.org/docs/rules/default-rules/#detect-apt-get-package-management"},
 	},
@@ -56,7 +56,7 @@ var commonRuntimeAlerts = []struct {
 		ID:          "FALCO-01-005",
 		Title:       "Crypto Miner Execution",
 		Description: "A process with a command line matching known crypto miners was executed.",
-		Severity:    SeverityCritical,
+		Severity:    types.SeverityCritical,
 		Rule:        "Crypto Miner Execution",
 		References:  []string{"https://falco.org/docs/rules/default-rules/#detect-crypto-miners"},
 	},
@@ -64,7 +64,7 @@ var commonRuntimeAlerts = []struct {
 		ID:          "FALCO-01-006",
 		Title:       "Container Privilege Escalation",
 		Description: "A container process attempted a privilege escalation by modifying capabilities.",
-		Severity:    SeverityCritical,
+		Severity:    types.SeverityCritical,
 		Rule:        "Container Capability Change",
 		References:  []string{"https://falco.org/docs/rules/default-rules/#container-capability-change"},
 	},
@@ -72,7 +72,7 @@ var commonRuntimeAlerts = []struct {
 		ID:          "FALCO-01-007",
 		Title:       "Container Namespace Change",
 		Description: "A container process attempted to modify namespaces, possibly trying to escape container isolation.",
-		Severity:    SeverityCritical,
+		Severity:    types.SeverityCritical,
 		Rule:        "Container Namespace Change",
 		References:  []string{"https://falco.org/docs/rules/default-rules/#container-namespace-change"},
 	},
@@ -80,7 +80,7 @@ var commonRuntimeAlerts = []struct {
 		ID:          "FALCO-01-008",
 		Title:       "File Created in /tmp with Binary Signature",
 		Description: "A process created a file in /tmp with binary signatures, potentially dropping malware.",
-		Severity:    SeverityHigh,
+		Severity:    types.SeverityHigh,
 		Rule:        "Binary Created in Temp Directory",
 		References:  []string{"https://falco.org/docs/rules/default-rules/#write-binary-to-tmp"},
 	},
@@ -88,7 +88,7 @@ var commonRuntimeAlerts = []struct {
 		ID:          "FALCO-01-009",
 		Title:       "Kernel Module Loading",
 		Description: "An attempt to load a kernel module from a container was detected.",
-		Severity:    SeverityCritical,
+		Severity:    types.SeverityCritical,
 		Rule:        "Load Kernel Module",
 		References:  []string{"https://falco.org/docs/rules/default-rules/#load-kernel-module"},
 	},
@@ -96,10 +96,17 @@ var commonRuntimeAlerts = []struct {
 		ID:          "FALCO-01-010",
 		Title:       "Execution in Unusual Directory",
 		Description: "A process was started in an unusual directory, which might indicate unauthorized software execution.",
-		Severity:    SeverityMedium,
+		Severity:    types.SeverityMedium,
 		Rule:        "Execution in Unusual Directory",
 		References:  []string{"https://falco.org/docs/rules/default-rules/#execution-in-unusual-dir"},
 	},
+}
+
+// BaseScanner provides common scanner functionality
+type BaseScanner struct {
+	name        string
+	description string
+	logger      *logrus.Logger
 }
 
 // FalcoScanner simule un scanner Falco
@@ -110,160 +117,158 @@ type FalcoScanner struct {
 
 // NewFalcoScanner crée un nouveau scanner Falco simulé
 func NewFalcoScanner(logger *logrus.Logger) *FalcoScanner {
-	base := NewBaseScanner("Falco", "Runtime security scanner for Kubernetes", logger)
-
 	return &FalcoScanner{
-		BaseScanner: base,
+		BaseScanner: NewBaseScanner("Falco", "Runtime behavior analysis using Falco", logger),
 		random:      rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
+func NewBaseScanner(name, description string, logger *logrus.Logger) *BaseScanner {
+	return &BaseScanner{
+		name:        name,
+		description: description,
+		logger:      logger,
+	}
+}
+
+// Name returns the scanner name
+func (s *BaseScanner) Name() string {
+	return s.name
+}
+
+// Description returns the scanner description
+func (s *BaseScanner) Description() string {
+	return s.description
+}
+
+// FilterFindings filters findings by minimum severity
+func (s *BaseScanner) FilterFindings(findings []types.VulnerabilityFinding, minSeverity types.VulnerabilitySeverity) []types.VulnerabilityFinding {
+	if minSeverity == "" {
+		return findings
+	}
+
+	var filtered []types.VulnerabilityFinding
+	for _, f := range findings {
+		if f.Severity >= minSeverity {
+			filtered = append(filtered, f)
+		}
+	}
+	return filtered
+}
+
 // Scan simule un scan Falco
-func (s *FalcoScanner) Scan(ctx context.Context, options ScanOptions) (*ScanResult, error) {
-	startTime := time.Now()
+func (s *FalcoScanner) Scan(ctx context.Context, options types.ScanOptions) (*types.ScanResult, error) {
+	start := time.Now()
+	s.logger.Info("Starting Falco scan...")
 
-	s.logger.Info("Starting Falco scan")
-
-	// Simuler un délai d'exécution réaliste
-	scanDuration := time.Duration(300+s.random.Intn(500)) * time.Millisecond
-
+	// Simulation d'exécution
 	select {
-	case <-time.After(scanDuration):
-		// Continue
+	case <-time.After(time.Duration(300+s.random.Intn(500)) * time.Millisecond):
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
 
-	// Préparer le résultat du scan
-	result := &ScanResult{
+	result := &types.ScanResult{
 		ScannerName: s.Name(),
-		StartTime:   startTime,
+		StartTime:   start,
 		EndTime:     time.Now(),
 		Success:     true,
-		Metadata: map[string]interface{}{
-			"falcoVersion": "0.34.1",
-		},
+		Metadata:    map[string]interface{}{"falcoVersion": "0.34.1"},
 	}
 
-	// Simuler les workloads à scanner
-	workloads := s.getWorkloadsToScan(options)
-
-	// Générer des résultats pour chaque workload
-	for _, workload := range workloads {
-		// Simuler les alertes runtime pour ce workload
-		runtimeFindings := s.simulateRuntimeAlerts(workload.Name, workload.Namespace, workload.Type, workload.Image, options)
-
-		result.Findings = append(result.Findings, runtimeFindings...)
+	// Génération simulée
+	for _, wl := range s.getWorkloadsToScan(options) {
+		alerts := s.simulateRuntimeAlerts(wl.Name, wl.Namespace, wl.Type, wl.Image, options)
+		result.Findings = append(result.Findings, alerts...)
 	}
 
-	// Filtrer selon la sévérité minimale si spécifiée
+	// Filtrage
 	result.Findings = s.FilterFindings(result.Findings, options.MinimumSeverity)
-
-	// Limiter le nombre de résultats si demandé
 	result.Findings = s.LimitFindings(result.Findings, options.MaxFindings)
 
-	s.logger.Infof("Falco scan completed in %s, found %d runtime alerts", result.EndTime.Sub(result.StartTime), len(result.Findings))
-
+	s.logger.Infof("Falco scan completed in %s, %d findings", result.EndTime.Sub(result.StartTime), len(result.Findings))
 	return result, nil
 }
 
-// simulateRuntimeAlerts génère des alertes runtime simulées pour un workload
-func (s *FalcoScanner) simulateRuntimeAlerts(workloadName, namespace, resourceType, image string, options ScanOptions) []VulnerabilityFinding {
-	var findings []VulnerabilityFinding
+func (s *FalcoScanner) LimitFindings(findings []types.VulnerabilityFinding, max int) []types.VulnerabilityFinding {
+	if max <= 0 || len(findings) <= max {
+		return findings
+	}
+	return findings[:max]
+}
 
-	// Déterminer la probabilité d'alertes basée sur l'image et le type de workload
-	alertProbability := 0.1 // 10% de base
+// simulateRuntimeAlerts génère des alertes runtime simulées
+func (s *FalcoScanner) simulateRuntimeAlerts(name, ns, kind, image string, options types.ScanOptions) []types.VulnerabilityFinding {
+	var findings []types.VulnerabilityFinding
 
-	// Augmenter la probabilité pour certains types d'images
+	alertProbability := 0.1
 	if containsAny(image, []string{"mysql", "postgres", "redis", "mongo"}) {
-		alertProbability += 0.1 // +10% pour les bases de données
+		alertProbability += 0.1
 	}
-
-	// Augmenter pour les images anciennes ou potentiellement vulnérables
 	if containsAny(image, []string{"ubuntu:16.04", "debian:9", "alpine:3.7"}) {
-		alertProbability += 0.15 // +15% pour les OS anciens
+		alertProbability += 0.15
 	}
 
-	// Pour chaque alerte possible, déterminer si elle s'applique
 	for _, alert := range commonRuntimeAlerts {
-		// Certaines alertes sont plus probables pour certains types de workloads
-		alertSpecificProbability := alertProbability
+		proba := alertProbability
 
-		// Personnaliser les probabilités selon le contexte
-		switch {
-		case alert.ID == "FALCO-01-003" && containsAny(image, []string{"mysql", "postgres", "redis", "mongo"}):
-			// Alerte de connexion sortante sur un conteneur de base de données
-			alertSpecificProbability += 0.2
-		case alert.ID == "FALCO-01-001" && containsAny(workloadName, []string{"api", "web", "app"}):
-			// Shell dans un conteneur pour les applications web/API
-			alertSpecificProbability += 0.15
-		case alert.ID == "FALCO-01-005":
-			// Crypto miners sont rares mais très graves
-			alertSpecificProbability -= 0.05
+		if alert.ID == "FALCO-01-003" && containsAny(image, []string{"mysql", "postgres"}) {
+			proba += 0.2
+		}
+		if alert.ID == "FALCO-01-001" && containsAny(name, []string{"api", "web"}) {
+			proba += 0.15
+		}
+		if alert.ID == "FALCO-01-005" {
+			proba -= 0.05
 		}
 
-		// Décider si l'alerte s'applique à ce workload
-		if s.random.Float64() < alertSpecificProbability {
-			finding := VulnerabilityFinding{
+		if s.random.Float64() < proba {
+			findings = append(findings, types.VulnerabilityFinding{
 				ID:                alert.ID,
 				Title:             alert.Title,
 				Description:       alert.Description,
 				Severity:          alert.Severity,
 				AffectedComponent: "Container Runtime",
-				ResourceID:        fmt.Sprintf("%s/%s", namespace, workloadName),
-				ResourceType:      resourceType,
-				Namespace:         namespace,
-				WorkloadName:      workloadName,
-				References:        alert.References,
+				ResourceID:        fmt.Sprintf("%s/%s", ns, name),
+				ResourceType:      kind,
+				Namespace:         ns,
+				WorkloadName:      name,
 				ScannerName:       s.Name(),
+				References:        alert.References,
 				DetectedAt:        time.Now(),
-				ExploitAvailable:  alert.Severity == SeverityCritical || alert.Severity == SeverityHigh,
+				ExploitAvailable:  alert.Severity == types.SeverityCritical || alert.Severity == types.SeverityHigh,
 				Metadata: map[string]interface{}{
 					"imageId":     image,
 					"ruleName":    alert.Rule,
 					"detectedPID": 1000 + s.random.Intn(5000),
 				},
-			}
-
-			findings = append(findings, finding)
+			})
 		}
 	}
 
 	return findings
 }
 
-// getWorkloadsToScan simule la récupération des workloads à scanner
-func (s *FalcoScanner) getWorkloadsToScan(options ScanOptions) []struct {
-	Name      string
-	Namespace string
-	Type      string
-	Image     string
+// getWorkloadsToScan simule la récupération de workloads
+func (s *FalcoScanner) getWorkloadsToScan(options types.ScanOptions) []struct {
+	Name, Namespace, Type, Image string
 } {
-	// Simuler une liste de workloads
-	workloads := []struct {
-		Name      string
-		Namespace string
-		Type      string
-		Image     string
+	all := []struct {
+		Name, Namespace, Type, Image string
 	}{
-		{Name: "frontend", Namespace: "default", Type: "Deployment", Image: "nginx:1.21.6"},
-		{Name: "api", Namespace: "default", Type: "Deployment", Image: "node:16.19.1"},
-		{Name: "database", Namespace: "default", Type: "StatefulSet", Image: "mysql:8.0.31"},
-		{Name: "redis", Namespace: "default", Type: "Deployment", Image: "redis:6.2.6"},
-		{Name: "logging", Namespace: "monitoring", Type: "DaemonSet", Image: "fluent/fluentd:v1.14"},
-		{Name: "metrics", Namespace: "monitoring", Type: "Deployment", Image: "prom/prometheus:v2.36.0"},
+		{"frontend", "default", "Deployment", "nginx:1.21.6"},
+		{"api", "default", "Deployment", "node:16.19.1"},
+		{"database", "default", "StatefulSet", "mysql:8.0.31"},
+		{"redis", "default", "Deployment", "redis:6.2.6"},
+		{"logging", "monitoring", "DaemonSet", "fluent/fluentd:v1.14"},
+		{"metrics", "monitoring", "Deployment", "prom/prometheus:v2.36.0"},
 	}
 
-	// Filtrer par namespace si spécifié
 	if len(options.IncludeNamespaces) > 0 {
 		var filtered []struct {
-			Name      string
-			Namespace string
-			Type      string
-			Image     string
+			Name, Namespace, Type, Image string
 		}
-
-		for _, w := range workloads {
+		for _, w := range all {
 			for _, ns := range options.IncludeNamespaces {
 				if w.Namespace == ns {
 					filtered = append(filtered, w)
@@ -271,20 +276,14 @@ func (s *FalcoScanner) getWorkloadsToScan(options ScanOptions) []struct {
 				}
 			}
 		}
-
-		workloads = filtered
+		all = filtered
 	}
 
-	// Filtrer par workload si spécifié
 	if len(options.IncludeWorkloads) > 0 {
 		var filtered []struct {
-			Name      string
-			Namespace string
-			Type      string
-			Image     string
+			Name, Namespace, Type, Image string
 		}
-
-		for _, w := range workloads {
+		for _, w := range all {
 			for _, name := range options.IncludeWorkloads {
 				if w.Name == name {
 					filtered = append(filtered, w)
@@ -292,17 +291,16 @@ func (s *FalcoScanner) getWorkloadsToScan(options ScanOptions) []struct {
 				}
 			}
 		}
-
-		workloads = filtered
+		all = filtered
 	}
 
-	return workloads
+	return all
 }
 
-// containsAny vérifie si une chaîne contient l'un des éléments d'une liste
-func containsAny(s string, substrings []string) bool {
-	for _, substr := range substrings {
-		if strings.Contains(s, substr) {
+// containsAny vérifie si une chaîne contient un des substrings
+func containsAny(s string, list []string) bool {
+	for _, sub := range list {
+		if strings.Contains(s, sub) {
 			return true
 		}
 	}

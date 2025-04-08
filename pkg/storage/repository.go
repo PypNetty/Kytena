@@ -64,6 +64,22 @@ type Repository interface {
 	CountBySeverity(ctx context.Context) (map[models.Severity]int, error)
 }
 
+func (r Repository) CreateKnownRisk(ctx context.Context, risk *models.KnownRisk) any {
+	panic("unimplemented")
+}
+
+func (r Repository) Create(ctx context.Context, risk *models.KnownRisk) any {
+	panic("unimplemented")
+}
+
+func (r Repository) CreateKnownRisk(ctx context.Context, risk *models.KnownRisk) any {
+	panic("unimplemented")
+}
+
+func (r Repository) CreateKnownRisk(ctx context.Context, risk *models.KnownRisk) any {
+	panic("unimplemented")
+}
+
 // FileRepository implémente Repository en utilisant des fichiers YAML
 type FileRepository struct {
 	// BasePath est le chemin de base où les fichiers seront stockés
@@ -76,6 +92,14 @@ type FileRepository struct {
 	lastUpdate time.Time
 	// cacheTTL est la durée de vie du cache
 	cacheTTL time.Duration
+}
+
+func (f *FileRepository) List(ctx context.Context, options ListOptions) (any, error) {
+	panic("unimplemented")
+}
+
+func (f *FileRepository) Create(ctx context.Context, knownRisk interface{}) error {
+	panic("unimplemented")
 }
 
 // NewFileRepository crée une nouvelle instance de FileRepository
