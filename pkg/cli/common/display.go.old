@@ -16,9 +16,8 @@ import (
 // ClusterOptions contient les options spécifiques aux commandes cluster
 type ClusterOptions struct {
 	Namespace   string
-	All         bool
-	IncludeJobs bool
 	IncludePods bool
+	IncludeJobs bool
 }
 
 // NewClusterCommand crée une nouvelle commande cluster
@@ -41,7 +40,7 @@ func NewClusterCommand() *cobra.Command {
 func newWorkloadsCommand() *cobra.Command {
 	options := ClusterOptions{}
 
-	baseCmd := common.CreateBaseCommand(
+	cmd := common.NewBaseCommand(
 		"workloads",
 		"List workloads in the Kubernetes cluster",
 		`Discover and list workloads in the Kubernetes cluster.
@@ -49,9 +48,7 @@ This command connects to the cluster using your kubeconfig
 and maps Kubernetes resources to Kytena workload models.`,
 		func(cmd *cobra.Command, args []string, globalOptions common.GlobalOptions) error {
 			// Créer le client Kubernetes
-			client, err := kubernetes.NewClient(kubernetes.ClientOptions{
-				KubeConfig: globalOptions.KubeConfig,
-			})
+			client, err := kubernetes.NewClient(globalOptions.KubeConfig)
 			if err != nil {
 				return fmt.Errorf("failed to create Kubernetes client: %w", err)
 			}
@@ -108,22 +105,19 @@ and maps Kubernetes resources to Kytena workload models.`,
 		},
 	)
 
-	cmd := baseCmd.Setup()
+	baseCmd := cmd.Setup()
 
 	// Ajouter les flags
-	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "Namespace to filter workloads")
+	baseCmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "Namespace to filter workloads")
+	baseCmd.Flags().BoolVar(&options.IncludePods, "include-pods", false, "Include pods in the workload discovery")
+	baseCmd.Flags().BoolVar(&options.IncludeJobs, "include-jobs", false, "Include jobs in the workload discovery")
 
-	cmd.Flags().BoolVar(&options.IncludePods, "include-pods", false, "Include pods in the workload discovery")
-
-	cmd.Flags().BoolVar(&options.IncludeJobs, "include-jobs", false, "Include jobs in the workload discovery")
-
-	return cmd
-
+	return baseCmd
 }
 
 // newNamespacesCommand crée une nouvelle commande cluster namespaces
 func newNamespacesCommand() *cobra.Command {
-	cmd := common.CreateBaseCommand(
+	cmd := common.NewBaseCommand(
 		"namespaces",
 		"List namespaces in the Kubernetes cluster",
 		`List namespaces in the Kubernetes cluster.
@@ -131,9 +125,7 @@ This command connects to the cluster using your kubeconfig
 and retrieves all namespaces.`,
 		func(cmd *cobra.Command, args []string, globalOptions common.GlobalOptions) error {
 			// Créer le client Kubernetes
-			client, err := kubernetes.NewClient(kubernetes.ClientOptions{
-				KubeConfig: globalOptions.KubeConfig,
-			})
+			client, err := kubernetes.NewClient(globalOptions.KubeConfig)
 			if err != nil {
 				return fmt.Errorf("failed to create Kubernetes client: %w", err)
 			}

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/PypNetty/Kytena/pkg/logger"
 )
 
 // TrivyScanner est un scanner de vulnérabilités utilisant Trivy
@@ -22,8 +22,12 @@ type TrivyScanner struct {
 	timeoutSeconds int
 }
 
+func (s *TrivyScanner) Configure(m map[string]interface{}) {
+	panic("unimplemented")
+}
+
 // NewTrivyScanner crée un nouveau scanner Trivy
-func NewTrivyScanner(logger *logrus.Logger) *TrivyScanner {
+func NewTrivyScanner(logger logger.Logger) *TrivyScanner {
 	base := NewBaseScanner("Trivy", "Container vulnerability scanner", logger)
 
 	return &TrivyScanner{
@@ -96,7 +100,7 @@ func (s *TrivyScanner) Scan(ctx context.Context, options ScanOptions) (*ScanResu
 
 	// Vérifier si un test spécifique est demandé
 	if testImage, ok := options.ScannerSpecific["testImage"].(string); ok && testImage != "" {
-		s.logger.Infof("Running test scan on image: %s", testImage)
+		s.logger.Info("Running test scan on image: %s", testImage)
 		// Exécuter un scan sur l'image de test
 		findings, err := s.scanImage(ctx, testImage, options)
 		if err != nil {
@@ -154,7 +158,7 @@ func (s *TrivyScanner) Scan(ctx context.Context, options ScanOptions) (*ScanResu
 	result.Success = true
 	result.EndTime = time.Now()
 
-	s.logger.Infof("Trivy scan completed in %s, found %d vulnerabilities", result.EndTime.Sub(result.StartTime), len(result.Findings))
+	s.logger.Info("Trivy scan completed in %s, found %d vulnerabilities", result.EndTime.Sub(result.StartTime), len(result.Findings))
 
 	return result, nil
 }

@@ -3,9 +3,25 @@ package cli
 import (
 	"context"
 
-	"github.com/sirupsen/logrus"
+	logruspkg "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/PypNetty/Kytena/pkg/logger"
 )
+
+// logrusAdapter adapte *logrus.Logger vers logger.Logger
+type logrusAdapter struct {
+	base *logruspkg.Logger
+}
+
+func (l *logrusAdapter) Debug(args ...interface{})                 { l.base.Debug(args...) }
+func (l *logrusAdapter) Debugf(format string, args ...interface{}) { l.base.Debugf(format, args...) }
+func (l *logrusAdapter) Info(args ...interface{})                  { l.base.Info(args...) }
+func (l *logrusAdapter) Infof(format string, args ...interface{})  { l.base.Infof(format, args...) }
+func (l *logrusAdapter) Warn(args ...interface{})                  { l.base.Warn(args...) }
+func (l *logrusAdapter) Warnf(format string, args ...interface{})  { l.base.Warnf(format, args...) }
+func (l *logrusAdapter) Error(args ...interface{})                 { l.base.Error(args...) }
+func (l *logrusAdapter) Errorf(format string, args ...interface{}) { l.base.Errorf(format, args...) }
 
 // GlobalOptions contient les options globales pour toutes les commandes
 type GlobalOptions struct {
@@ -16,7 +32,7 @@ type GlobalOptions struct {
 	// Verbose active la sortie verbeuse
 	Verbose bool
 	// Logger est le logger utilisé
-	Logger *logrus.Logger
+	Logger logger.Logger
 	// KubeConfig est le chemin vers le fichier kubeconfig
 	KubeConfig string
 	// InCluster indique s'il faut utiliser la configuration in-cluster
@@ -34,19 +50,19 @@ func GetGlobalOptions(cmd *cobra.Command) GlobalOptions {
 		ctx = context.Background()
 	}
 
-	logger := logrus.New()
-	logger.SetLevel(logrus.InfoLevel)
+	baseLogger := logruspkg.New()
+	baseLogger.SetLevel(logruspkg.InfoLevel)
+
+	if cmd.Flag("verbose").Value.String() == "true" {
+		baseLogger.SetLevel(logruspkg.DebugLevel)
+	}
 
 	options := GlobalOptions{
 		Context:      ctx,
-		Logger:       logger,
+		Logger:       &logrusAdapter{base: baseLogger},
 		DataDir:      "./data",
 		OutputFormat: "text",
 		KubeConfig:   cmd.Flag("kubeconfig").Value.String(),
-	}
-
-	if cmd.Flag("verbose").Value.String() == "true" {
-		options.Logger.SetLevel(logrus.DebugLevel)
 	}
 
 	return options

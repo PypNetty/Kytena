@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/PypNetty/Kytena/pkg/cli"
+	"github.com/PypNetty/Kytena/pkg/cli/commands"
 	"github.com/PypNetty/Kytena/pkg/models"
 	"github.com/spf13/cobra"
 )
@@ -26,7 +27,7 @@ type UpdateOptions struct {
 func NewUpdateCommand() *cobra.Command {
 	options := UpdateOptions{}
 
-	cmd := cli.NewBaseCommand(
+	cmd := cli.NewCommand(
 		"update [id]",
 		"Update an existing KnownRisk",
 		`Update properties of an existing KnownRisk.

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PypNetty/Kytena/pkg/cli"
+	"github.com/PypNetty/Kytena/pkg/cli/common"
 	"github.com/PypNetty/Kytena/pkg/models"
 	"github.com/PypNetty/Kytena/pkg/storage"
 	"github.com/spf13/cobra"
@@ -39,12 +39,12 @@ func NewDashboardCommand() *cobra.Command {
 		MaxWorkloads: 5,
 	}
 
-	cmd := cli.NewBaseCommand(
+	cmd := common.CreateBaseCommand(
 		"dashboard",
 		"Display a security risk dashboard",
 		`Display a comprehensive dashboard of your security posture based on KnownRisks.
 This provides an overview of your security debt and highlights critical areas that need attention.`,
-		func(cmd *cobra.Command, args []string, globalOptions cli.GlobalOptions) error {
+		func(cmd *cobra.Command, args []string, globalOptions common.GlobalOptions) error {
 			return runDashboard(cmd, args, globalOptions, options)
 		},
 	)
@@ -61,9 +61,9 @@ This provides an overview of your security debt and highlights critical areas th
 }
 
 // runDashboard exécute la commande dashboard
-func runDashboard(_ *cobra.Command, _ []string, globalOptions cli.GlobalOptions, options DashboardOptions) error {
+func runDashboard(_ *cobra.Command, _ []string, globalOptions common.GlobalOptions, options DashboardOptions) error {
 	// Créer le repository
-	repo, err := cli.CreateRepository(globalOptions)
+	repo, err := common.NewRepositoryWrapper(globalOptions.DataDir, globalOptions.Logger)
 	if err != nil {
 		return fmt.Errorf("failed to create repository: %w", err)
 	}
@@ -265,7 +265,7 @@ func calculateOverallRiskScore(risks []*models.KnownRisk) {
 	fmt.Printf("\nOverall Risk Score: %d%% (%s)\n", scorePercentage, riskLevel)
 
 	// Afficher la barre de score
-	cli.DisplayScoreBar(scorePercentage, 50)
+	common.DisplayScoreBar(scorePercentage, 50)
 }
 
 // displaySeverityDistribution affiche un histogramme des sévérités
