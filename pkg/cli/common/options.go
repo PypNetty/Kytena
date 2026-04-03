@@ -5,7 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/PypNetty/Kytena/pkg/logger"
+	"github.com/PypNetty/kytena/pkg/loggers"
+	"github.com/PypNetty/kytena/pkg/loggers/adapters"
 	"github.com/sirupsen/logrus"
 )
 
@@ -13,14 +14,14 @@ type GlobalOptions struct {
 	Context    context.Context
 	DataDir    string
 	KubeConfig string
-	Logger     logger.Logger
+	Logger     loggers.Logger
 	Debug      bool
 }
 
 var globalOptions GlobalOptions
 
 func InitGlobalOptions() {
-	// Initialise le logger logrus et adapte à l'interface logger.Logger
+	// Initialise le logger logrus et adapte à l'interface loggers.Logger
 	base := logrus.New()
 	base.SetLevel(logrus.InfoLevel)
 
@@ -32,7 +33,7 @@ func InitGlobalOptions() {
 	globalOptions = GlobalOptions{
 		Context: context.Background(),
 		DataDir: filepath.Join(os.Getenv("HOME"), ".kytena"),
-		Logger:  logger.FromLogrus(base), // ⚠️ cette fonction doit exister dans pkg/logger
+		Logger:  &adapters.LogrusAdapter{Base: base},
 		Debug:   debug,
 	}
 }

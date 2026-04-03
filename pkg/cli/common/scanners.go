@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/PypNetty/Kytena/pkg/scanner"
+	"github.com/PypNetty/kytena/pkg/scanner"
 )
 
 // ScannerConfig contient la configuration commune pour les scanners

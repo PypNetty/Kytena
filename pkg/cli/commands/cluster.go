@@ -8,8 +8,8 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/PypNetty/Kytena/pkg/cli/common"
-	"github.com/PypNetty/Kytena/pkg/kubernetes"
+	"github.com/PypNetty/kytena/pkg/cli/common"
+	"github.com/PypNetty/kytena/pkg/kubernetes"
 	"github.com/spf13/cobra"
 )
 

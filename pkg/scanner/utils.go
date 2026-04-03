@@ -3,7 +3,7 @@ package scanner
 import (
 	"strings"
 
-	types "github.com/PypNetty/Kytena/pkg/scanner/types"
+	types "github.com/PypNetty/kytena/pkg/scanner/types"
 )
 
 // MapSeverity convertit une chaîne de sévérité en type VulnerabilitySeverity

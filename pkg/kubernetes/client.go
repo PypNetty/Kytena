@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/PypNetty/Kytena/pkg/models"
+	"github.com/PypNetty/kytena/pkg/models"
 	"github.com/sirupsen/logrus"
 
 	appsv1 "k8s.io/api/apps/v1"

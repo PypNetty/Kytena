@@ -1,7 +1,6 @@
 package adapters
 
 import (
-	"github.com/PypNetty/Kytena/pkg/logger"
 	"github.com/sirupsen/logrus"
 )
 

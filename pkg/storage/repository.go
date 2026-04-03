@@ -3,10 +3,15 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
-	"github.com/PypNetty/Kytena/pkg/models"
+	"github.com/PypNetty/kytena/pkg/models"
 )
 
 // Filter définit les options de filtrage pour les recherches
@@ -64,22 +69,6 @@ type Repository interface {
 	CountBySeverity(ctx context.Context) (map[models.Severity]int, error)
 }
 
-func (r Repository) CreateKnownRisk(ctx context.Context, risk *models.KnownRisk) any {
-	panic("unimplemented")
-}
-
-func (r Repository) Create(ctx context.Context, risk *models.KnownRisk) any {
-	panic("unimplemented")
-}
-
-func (r Repository) CreateKnownRisk(ctx context.Context, risk *models.KnownRisk) any {
-	panic("unimplemented")
-}
-
-func (r Repository) CreateKnownRisk(ctx context.Context, risk *models.KnownRisk) any {
-	panic("unimplemented")
-}
-
 // FileRepository implémente Repository en utilisant des fichiers YAML
 type FileRepository struct {
 	// BasePath est le chemin de base où les fichiers seront stockés
@@ -94,12 +83,163 @@ type FileRepository struct {
 	cacheTTL time.Duration
 }
 
-func (f *FileRepository) List(ctx context.Context, options ListOptions) (any, error) {
-	panic("unimplemented")
+func (f *FileRepository) storageFilePath() string {
+	return filepath.Join(f.BasePath, "knownrisks.json")
 }
 
-func (f *FileRepository) Create(ctx context.Context, knownRisk interface{}) error {
-	panic("unimplemented")
+func (f *FileRepository) ensureLoaded() error {
+	if f.cache == nil {
+		f.cache = make(map[string]*models.KnownRisk)
+	}
+
+	if len(f.cache) > 0 {
+		return nil
+	}
+
+	if err := os.MkdirAll(f.BasePath, 0755); err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile(f.storageFilePath())
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+
+	if len(data) == 0 {
+		return nil
+	}
+
+	var risks []*models.KnownRisk
+	if err := json.Unmarshal(data, &risks); err != nil {
+		return err
+	}
+
+	for _, kr := range risks {
+		if kr != nil {
+			f.cache[kr.ID] = kr
+		}
+	}
+
+	return nil
+}
+
+func (f *FileRepository) persist() error {
+	if err := os.MkdirAll(f.BasePath, 0755); err != nil {
+		return err
+	}
+
+	risks := make([]*models.KnownRisk, 0, len(f.cache))
+	for _, kr := range f.cache {
+		risks = append(risks, kr)
+	}
+
+	data, err := json.MarshalIndent(risks, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	tmp := f.storageFilePath() + ".tmp"
+	if err := os.WriteFile(tmp, data, 0644); err != nil {
+		return err
+	}
+
+	return os.Rename(tmp, f.storageFilePath())
+}
+
+func (f *FileRepository) List(ctx context.Context, options ListOptions) ([]*models.KnownRisk, error) {
+	if err := f.ensureLoaded(); err != nil {
+		return nil, err
+	}
+
+	result := make([]*models.KnownRisk, 0, len(f.cache))
+	for _, kr := range f.cache {
+		if options.Filter.Status != "" && !strings.EqualFold(string(kr.Status), options.Filter.Status) {
+			continue
+		}
+		if options.Filter.Severity != "" && !strings.EqualFold(string(kr.Severity), options.Filter.Severity) {
+			continue
+		}
+		if options.Filter.Namespace != "" && !strings.EqualFold(kr.WorkloadInfo.Namespace, options.Filter.Namespace) {
+			continue
+		}
+		if options.Filter.Workload != "" && !strings.Contains(strings.ToLower(kr.WorkloadInfo.Name), strings.ToLower(options.Filter.Workload)) {
+			continue
+		}
+
+		if options.Filter.ExpiryBefore != nil && !kr.ExpiresAt.Before(*options.Filter.ExpiryBefore) {
+			continue
+		}
+		if options.Filter.ExpiryAfter != nil && !kr.ExpiresAt.After(*options.Filter.ExpiryAfter) {
+			continue
+		}
+
+		if len(options.Filter.Tags) > 0 {
+			hasAllTags := true
+			for _, want := range options.Filter.Tags {
+				found := false
+				for _, tag := range kr.Tags {
+					if strings.EqualFold(tag, want) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					hasAllTags = false
+					break
+				}
+			}
+			if !hasAllTags {
+				continue
+			}
+		}
+
+		result = append(result, kr)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		desc := strings.EqualFold(options.Sort.Direction, "desc")
+		switch strings.ToLower(options.Sort.Field) {
+		case "severity":
+			li := models.GetSeverityPriority(result[i].Severity)
+			lj := models.GetSeverityPriority(result[j].Severity)
+			if desc {
+				return li > lj
+			}
+			return li < lj
+		case "workload":
+			li := result[i].WorkloadInfo.FormattedName()
+			lj := result[j].WorkloadInfo.FormattedName()
+			if desc {
+				return li > lj
+			}
+			return li < lj
+		case "expiry":
+			fallthrough
+		default:
+			if desc {
+				return result[i].ExpiresAt.After(result[j].ExpiresAt)
+			}
+			return result[i].ExpiresAt.Before(result[j].ExpiresAt)
+		}
+	})
+
+	if options.Offset > 0 {
+		if options.Offset >= len(result) {
+			result = []*models.KnownRisk{}
+		} else {
+			result = result[options.Offset:]
+		}
+	}
+
+	if options.Limit > 0 && len(result) > options.Limit {
+		result = result[:options.Limit]
+	}
+
+	_ = ctx
+	return result, nil
 }
 
 // NewFileRepository crée une nouvelle instance de FileRepository
@@ -130,9 +270,133 @@ func WithCache(ttl time.Duration) FileRepositoryOption {
 	}
 }
 
-// implémentation des méthodes de Repository pour FileRepository
-// (j'ai omis l'implémentation pour garder le code concis, mais ce serait une version améliorée
-// basée sur le FileRepository original)
+// Save persiste un KnownRisk
+func (f *FileRepository) Save(ctx context.Context, kr *models.KnownRisk) error {
+	if err := f.ensureLoaded(); err != nil {
+		return err
+	}
+
+	if err := kr.Validate(); err != nil {
+		return err
+	}
+	f.cache[kr.ID] = kr
+	f.lastUpdate = time.Now()
+	if err := f.persist(); err != nil {
+		return err
+	}
+	_ = ctx
+	return nil
+}
+
+// Get récupère un KnownRisk par son ID
+func (f *FileRepository) Get(ctx context.Context, id string) (*models.KnownRisk, error) {
+	if err := f.ensureLoaded(); err != nil {
+		return nil, err
+	}
+
+	kr, exists := f.cache[id]
+	if !exists {
+		return nil, ErrNotFound
+	}
+	_ = ctx
+	return kr, nil
+}
+
+// Update met à jour un KnownRisk existant
+func (f *FileRepository) Update(ctx context.Context, kr *models.KnownRisk) error {
+	if err := f.ensureLoaded(); err != nil {
+		return err
+	}
+
+	if _, exists := f.cache[kr.ID]; !exists {
+		return ErrNotFound
+	}
+	f.cache[kr.ID] = kr
+	f.lastUpdate = time.Now()
+	if err := f.persist(); err != nil {
+		return err
+	}
+	_ = ctx
+	return nil
+}
+
+// Delete supprime un KnownRisk
+func (f *FileRepository) Delete(ctx context.Context, id string) error {
+	if err := f.ensureLoaded(); err != nil {
+		return err
+	}
+
+	if _, exists := f.cache[id]; !exists {
+		return ErrNotFound
+	}
+	delete(f.cache, id)
+	f.lastUpdate = time.Now()
+	if err := f.persist(); err != nil {
+		return err
+	}
+	_ = ctx
+	return nil
+}
+
+// GetByVulnerabilityID recherche les KnownRisks par ID de vulnérabilité
+func (f *FileRepository) GetByVulnerabilityID(ctx context.Context, vulnerabilityID string) ([]*models.KnownRisk, error) {
+	if err := f.ensureLoaded(); err != nil {
+		return nil, err
+	}
+
+	var result []*models.KnownRisk
+	for _, kr := range f.cache {
+		if kr.VulnerabilityID == vulnerabilityID {
+			result = append(result, kr)
+		}
+	}
+	_ = ctx
+	return result, nil
+}
+
+// GetByWorkload recherche les KnownRisks par workload
+func (f *FileRepository) GetByWorkload(ctx context.Context, namespace, name string) ([]*models.KnownRisk, error) {
+	if err := f.ensureLoaded(); err != nil {
+		return nil, err
+	}
+
+	var result []*models.KnownRisk
+	for _, kr := range f.cache {
+		if kr.WorkloadInfo.Namespace == namespace && kr.WorkloadInfo.Name == name {
+			result = append(result, kr)
+		}
+	}
+	_ = ctx
+	return result, nil
+}
+
+// CountByStatus compte les KnownRisks par statut
+func (f *FileRepository) CountByStatus(ctx context.Context) (map[models.Status]int, error) {
+	if err := f.ensureLoaded(); err != nil {
+		return nil, err
+	}
+
+	counts := make(map[models.Status]int)
+	for _, kr := range f.cache {
+		counts[kr.Status]++
+	}
+	_ = ctx
+	return counts, nil
+}
+
+// CountBySeverity compte les KnownRisks par sévérité
+func (f *FileRepository) CountBySeverity(ctx context.Context) (map[models.Severity]int, error) {
+	if err := f.ensureLoaded(); err != nil {
+		return nil, err
+	}
+
+	counts := make(map[models.Severity]int)
+	for _, kr := range f.cache {
+		counts[kr.Severity]++
+	}
+	_ = ctx
+	return counts, nil
+}
 
 // InMemoryRepository implémente Repository avec un stockage en mémoire (utile pour les tests)
 type InMemoryRepository struct {

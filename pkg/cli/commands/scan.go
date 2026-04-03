@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PypNetty/Kytena/pkg/cli/common"
-	"github.com/PypNetty/Kytena/pkg/scanner"
-	"github.com/PypNetty/Kytena/pkg/scanner/types"
-	"github.com/PypNetty/Kytena/pkg/storage"
+	"github.com/PypNetty/kytena/pkg/cli/common"
+	"github.com/PypNetty/kytena/pkg/scanner"
+	"github.com/PypNetty/kytena/pkg/scanner/types"
+	"github.com/PypNetty/kytena/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -74,12 +74,6 @@ func runScan(ctx context.Context, options *ScanOptions, globalOpts *common.Globa
 		return fmt.Errorf("failed to create repository: %w", err)
 	}
 
-	// Adapter le repository au format attendu
-	repoAdapter := &scanner.RepositoryAdapter{
-		Repository: repo,
-		Logger:     globalOpts.Logger,
-	}
-
 	// Créer le registry de scanners
 	registry := scanner.NewVulnerabilityScannerRegistry()
 
@@ -103,7 +97,7 @@ func runScan(ctx context.Context, options *ScanOptions, globalOpts *common.Globa
 	registry.RegisterScanner(trivyScanner)
 
 	// Créer l'orchestrateur de scan
-	orchestrator := scanner.NewScanOrchestrator(registry, repoAdapter, globalOpts.Logger)
+	orchestrator := scanner.NewScanOrchestrator(registry, repo, globalOpts.Logger)
 
 	// Configurer les options de scan
 	scanOptions := types.ScanOptions{
@@ -130,7 +124,7 @@ func runScan(ctx context.Context, options *ScanOptions, globalOpts *common.Globa
 
 	// Accepter les actions proposées si demandé
 	if options.AcceptProposed && len(result.ProposedActions) > 0 {
-		if err := acceptProposedKnownRisks(ctx, result.ProposedActions, repoAdapter); err != nil {
+		if err := acceptProposedKnownRisks(ctx, result.ProposedActions, repo); err != nil {
 			common.PrintError("Failed to accept proposed KnownRisks: %v", err)
 		}
 	}
@@ -265,7 +259,7 @@ func truncateString(s string, maxLen int) string {
 }
 
 // acceptProposedKnownRisks enregistre les KnownRisks proposés
-func acceptProposedKnownRisks(ctx context.Context, proposals []scanner.ProposedKnownRisk, repo scanner.Repository) error {
+func acceptProposedKnownRisks(ctx context.Context, proposals []scanner.ProposedKnownRisk, repo storage.Repository) error {
 	common.PrintInfo("Accepting proposed KnownRisks...")
 
 	var errors []string

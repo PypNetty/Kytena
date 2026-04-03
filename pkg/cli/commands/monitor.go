@@ -9,8 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/PypNetty/Kytena/pkg/cli"
-	"github.com/PypNetty/Kytena/pkg/reevaluator"
+	"github.com/PypNetty/kytena/pkg/cli/common"
+	"github.com/PypNetty/kytena/pkg/reevaluator"
+	"github.com/PypNetty/kytena/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -29,13 +30,13 @@ func NewMonitorCommand() *cobra.Command {
 		LogDir:           "./logs",
 	}
 
-	cmd := cli.NewBaseCommand(
+	cmd := common.CreateBaseCommand(
 		"monitor",
 		"Start the KnownRisk monitor",
 		`Start the KnownRisk monitor that periodically reevaluates KnownRisks
 and generates notifications for expired or soon-to-expire risks.
 The monitor runs continuously until interrupted (Ctrl+C).`,
-		func(cmd *cobra.Command, args []string, globalOptions cli.GlobalOptions) error {
+		func(cmd *cobra.Command, args []string, globalOptions common.GlobalOptions) error {
 			return runMonitor(cmd, args, globalOptions, options)
 		},
 	)
@@ -51,9 +52,9 @@ The monitor runs continuously until interrupted (Ctrl+C).`,
 }
 
 // runMonitor exécute la commande monitor
-func runMonitor(_ *cobra.Command, _ []string, globalOptions cli.GlobalOptions, options MonitorOptions) error {
+func runMonitor(_ *cobra.Command, _ []string, globalOptions common.GlobalOptions, options MonitorOptions) error {
 	// Créer le repository
-	repo, err := cli.CreateRepository(globalOptions)
+	repo, err := storage.NewFileRepository(globalOptions.DataDir)
 	if err != nil {
 		return fmt.Errorf("failed to create repository: %w", err)
 	}

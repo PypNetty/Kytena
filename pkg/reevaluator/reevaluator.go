@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/PypNetty/Kytena/pkg/models"
-	"github.com/PypNetty/Kytena/pkg/storage"
-	"github.com/sirupsen/logrus"
+	"github.com/PypNetty/kytena/pkg/loggers"
+	"github.com/PypNetty/kytena/pkg/models"
+	"github.com/PypNetty/kytena/pkg/storage"
 )
 
 // NotificationType représente le type de notification
@@ -71,17 +71,12 @@ type PeriodicReevaluator struct {
 	ticker               *time.Ticker
 	done                 chan bool
 	running              bool
-	logger               *logrus.Logger
+	logger               loggers.Logger
 	lastResult           *ReevaluationResult
 }
 
 // NewPeriodicReevaluator crée un nouveau réévaluateur périodique
-func NewPeriodicReevaluator(repo storage.Repository, interval time.Duration, logger *logrus.Logger) *PeriodicReevaluator {
-	if logger == nil {
-		logger = logrus.New()
-		logger.SetLevel(logrus.InfoLevel)
-	}
-
+func NewPeriodicReevaluator(repo storage.Repository, interval time.Duration, logger loggers.Logger) *PeriodicReevaluator {
 	return &PeriodicReevaluator{
 		repository:           repo,
 		interval:             interval,

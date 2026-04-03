@@ -9,9 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PypNetty/Kytena/pkg/cli"
-	"github.com/PypNetty/Kytena/pkg/cli/commands"
-	"github.com/PypNetty/Kytena/pkg/models"
+	"github.com/PypNetty/kytena/pkg/cli"
+	"github.com/PypNetty/kytena/pkg/cli/common"
+	"github.com/PypNetty/kytena/pkg/models"
+	"github.com/PypNetty/kytena/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -27,12 +28,12 @@ type UpdateOptions struct {
 func NewUpdateCommand() *cobra.Command {
 	options := UpdateOptions{}
 
-	cmd := cli.NewCommand(
+	cmd := common.CreateBaseCommand(
 		"update [id]",
 		"Update an existing KnownRisk",
 		`Update properties of an existing KnownRisk.
 You can extend the expiry date, update the status, or add tags and tickets.`,
-		func(cmd *cobra.Command, args []string, globalOptions cli.GlobalOptions) error {
+		func(cmd *cobra.Command, args []string, globalOptions common.GlobalOptions) error {
 			if len(args) != 1 {
 				return fmt.Errorf("exactly one argument is required: the ID of the KnownRisk")
 			}
@@ -40,7 +41,7 @@ You can extend the expiry date, update the status, or add tags and tickets.`,
 			id := args[0]
 
 			// Créer le repository
-			repo, err := cli.CreateRepository(globalOptions)
+			repo, err := storage.NewFileRepository(globalOptions.DataDir)
 			if err != nil {
 				return fmt.Errorf("failed to create repository: %w", err)
 			}

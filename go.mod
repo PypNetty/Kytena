@@ -1,4 +1,4 @@
-module github.com/PypNetty/Kytena
+module github.com/PypNetty/kytena
 
 go 1.24.1
 
@@ -57,5 +57,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
-
-replace github.com/PypNetty/Kytena => ../Kytena

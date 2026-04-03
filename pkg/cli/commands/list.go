@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PypNetty/Kytena/pkg/cli/common"
-	"github.com/PypNetty/Kytena/pkg/models"
-	"github.com/PypNetty/Kytena/pkg/storage"
+	"github.com/PypNetty/kytena/pkg/cli/common"
+	"github.com/PypNetty/kytena/pkg/models"
+	"github.com/PypNetty/kytena/pkg/storage"
 	"github.com/spf13/cobra"
 )
 

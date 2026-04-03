@@ -9,7 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PypNetty/Kytena/pkg/logger"
+	"github.com/PypNetty/kytena/pkg/loggers"
+	types "github.com/PypNetty/kytena/pkg/scanner/types"
 )
 
 // TrivyScanner est un scanner de vulnérabilités utilisant Trivy
@@ -22,12 +23,12 @@ type TrivyScanner struct {
 	timeoutSeconds int
 }
 
-func (s *TrivyScanner) Configure(m map[string]interface{}) {
-	panic("unimplemented")
+func (s *TrivyScanner) Configure(m map[string]interface{}) error {
+	return s.SetConfig(m)
 }
 
 // NewTrivyScanner crée un nouveau scanner Trivy
-func NewTrivyScanner(logger logger.Logger) *TrivyScanner {
+func NewTrivyScanner(logger loggers.Logger) *TrivyScanner {
 	base := NewBaseScanner("Trivy", "Container vulnerability scanner", logger)
 
 	return &TrivyScanner{
@@ -42,11 +43,6 @@ func NewTrivyScanner(logger logger.Logger) *TrivyScanner {
 
 // SetConfig configure le scanner Trivy
 func (s *TrivyScanner) SetConfig(config map[string]interface{}) error {
-	// Appeler la méthode de base
-	if err := s.BaseScanner.SetConfig(config); err != nil {
-		return err
-	}
-
 	// Extraire les configurations spécifiques à Trivy
 	if path, ok := config["binaryPath"].(string); ok && path != "" {
 		s.binaryPath = path
@@ -68,6 +64,10 @@ func (s *TrivyScanner) SetConfig(config map[string]interface{}) error {
 		s.timeoutSeconds = timeout
 	}
 
+	if timeout, ok := config["timeout"].(time.Duration); ok && timeout > 0 {
+		s.timeoutSeconds = int(timeout.Seconds())
+	}
+
 	// Vérifier que le binaire Trivy est accessible
 	_, err := exec.LookPath(s.binaryPath)
 	if err != nil {
@@ -78,13 +78,13 @@ func (s *TrivyScanner) SetConfig(config map[string]interface{}) error {
 }
 
 // Scan lance un scan Trivy
-func (s *TrivyScanner) Scan(ctx context.Context, options ScanOptions) (*ScanResult, error) {
+func (s *TrivyScanner) Scan(ctx context.Context, options types.ScanOptions) (*types.ScanResult, error) {
 	startTime := time.Now()
 
 	s.logger.Info("Starting Trivy scan")
 
 	// Préparer le résultat du scan
-	result := &ScanResult{
+	result := &types.ScanResult{
 		ScannerName: s.Name(),
 		StartTime:   startTime,
 		Success:     false,
@@ -98,55 +98,41 @@ func (s *TrivyScanner) Scan(ctx context.Context, options ScanOptions) (*ScanResu
 
 	s.logger.Debugf("Found %d workloads to scan", len(workloads))
 
-	// Vérifier si un test spécifique est demandé
-	if testImage, ok := options.ScannerSpecific["testImage"].(string); ok && testImage != "" {
-		s.logger.Info("Running test scan on image: %s", testImage)
-		// Exécuter un scan sur l'image de test
-		findings, err := s.scanImage(ctx, testImage, options)
+	// Exécuter un scan pour chaque workload
+	for _, workload := range workloads {
+		s.logger.Debugf("Scanning workload: %s/%s (%s)", workload.Namespace, workload.Name, workload.Type)
+
+		// Récupérer le premier conteneur qui a une image
+		var imageToScan string
+		for _, container := range workload.Containers {
+			if container.Image != "" {
+				imageToScan = container.Image
+				break
+			}
+		}
+
+		// Si aucune image n'est trouvée, passer au workload suivant
+		if imageToScan == "" {
+			s.logger.Warnf("No image found for workload: %s/%s", workload.Namespace, workload.Name)
+			continue
+		}
+
+		// Exécuter le scan sur l'image
+		findings, err := s.scanImage(ctx, imageToScan, options)
 		if err != nil {
-			result.Error = err
-			result.EndTime = time.Now()
-			return result, err
+			s.logger.Warnf("Error scanning image %s: %v", imageToScan, err)
+			continue
+		}
+
+		// Ajouter les informations du workload aux findings
+		for i := range findings {
+			findings[i].ResourceType = string(workload.Type)
+			findings[i].Namespace = workload.Namespace
+			findings[i].WorkloadName = workload.Name
+			findings[i].ResourceID = fmt.Sprintf("%s/%s", workload.Namespace, workload.Name)
 		}
 
 		result.Findings = append(result.Findings, findings...)
-	} else {
-		// Exécuter un scan pour chaque workload
-		for _, workload := range workloads {
-			s.logger.Debugf("Scanning workload: %s/%s (%s)", workload.Namespace, workload.Name, workload.Type)
-
-			// Récupérer le premier conteneur qui a une image
-			var imageToScan string
-			for _, container := range workload.Containers {
-				if container.Image != "" {
-					imageToScan = container.Image
-					break
-				}
-			}
-
-			// Si aucune image n'est trouvée, passer au workload suivant
-			if imageToScan == "" {
-				s.logger.Warnf("No image found for workload: %s/%s", workload.Namespace, workload.Name)
-				continue
-			}
-
-			// Exécuter le scan sur l'image
-			findings, err := s.scanImage(ctx, imageToScan, options)
-			if err != nil {
-				s.logger.Warnf("Error scanning image %s: %v", imageToScan, err)
-				continue
-			}
-
-			// Ajouter les informations du workload aux findings
-			for i := range findings {
-				findings[i].ResourceType = string(workload.Type)
-				findings[i].Namespace = workload.Namespace
-				findings[i].WorkloadName = workload.Name
-				findings[i].ResourceID = fmt.Sprintf("%s/%s", workload.Namespace, workload.Name)
-			}
-
-			result.Findings = append(result.Findings, findings...)
-		}
 	}
 
 	// Filtrer les findings selon la sévérité minimale
@@ -184,7 +170,7 @@ func (s *TrivyScanner) getTrivyVersion() string {
 }
 
 // getWorkloadsToScan récupère les workloads à scanner
-func (s *TrivyScanner) getWorkloadsToScan(ctx context.Context, options ScanOptions) []struct {
+func (s *TrivyScanner) getWorkloadsToScan(ctx context.Context, options types.ScanOptions) []struct {
 	Name       string
 	Namespace  string
 	Type       string
@@ -252,7 +238,7 @@ func (s *TrivyScanner) getWorkloadsToScan(ctx context.Context, options ScanOptio
 }
 
 // scanImage simule un scan Trivy sur une image
-func (s *TrivyScanner) scanImage(ctx context.Context, image string, options ScanOptions) ([]VulnerabilityFinding, error) {
+func (s *TrivyScanner) scanImage(ctx context.Context, image string, options types.ScanOptions) ([]types.VulnerabilityFinding, error) {
 	// Pour cet exemple, nous simulons les résultats du scan
 	// Dans une implémentation réelle, cette méthode exécuterait Trivy sur l'image
 
@@ -265,7 +251,7 @@ func (s *TrivyScanner) scanImage(ctx context.Context, image string, options Scan
 	}
 
 	// Simuler les résultats du scan
-	var findings []VulnerabilityFinding
+	var findings []types.VulnerabilityFinding
 
 	// Adapter le nombre de vulnérabilités simulées en fonction de l'image
 	numVulnerabilities := 2 + rand.Intn(8)
@@ -277,18 +263,18 @@ func (s *TrivyScanner) scanImage(ctx context.Context, image string, options Scan
 
 	// Générer des vulnérabilités simulées
 	for i := 0; i < numVulnerabilities; i++ {
-		severity := SeverityMedium
+		severity := types.SeverityMedium
 
 		// Distribuer les sévérités de manière aléatoire mais réaliste
 		r := rand.Float64()
 		if r < 0.1 {
-			severity = SeverityCritical
+			severity = types.SeverityCritical
 		} else if r < 0.3 {
-			severity = SeverityHigh
+			severity = types.SeverityHigh
 		} else if r < 0.7 {
-			severity = SeverityMedium
+			severity = types.SeverityMedium
 		} else {
-			severity = SeverityLow
+			severity = types.SeverityLow
 		}
 
 		// Construire un identifiant de vulnérabilité
@@ -322,21 +308,21 @@ func (s *TrivyScanner) scanImage(ctx context.Context, image string, options Scan
 		title := fmt.Sprintf(titles[rand.Intn(len(titles))], components[rand.Intn(len(components))])
 
 		// Créer la vulnérabilité
-		finding := VulnerabilityFinding{
+		finding := types.VulnerabilityFinding{
 			ID:                id,
 			Title:             title,
 			Description:       fmt.Sprintf("This is a simulated vulnerability for %s", id),
 			Severity:          severity,
 			AffectedComponent: components[rand.Intn(len(components))],
-			AffectedVersion:   fmt.Sprintf("%d.%d.%d", rand.Intn(10), rand.Intn(10), rand.Intn(10)),
-			FixedVersion:      fmt.Sprintf("%d.%d.%d", rand.Intn(10)+1, rand.Intn(10), rand.Intn(10)),
 			ScannerName:       s.Name(),
 			DetectedAt:        time.Now(),
 			ExploitAvailable:  rand.Float64() < 0.2, // 20% de chance d'avoir un exploit disponible
 			References:        []string{fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", id)},
 			Metadata: map[string]interface{}{
-				"image":     image,
-				"cvssScore": 2.0 + rand.Float64()*8.0, // Score CVSS entre 2 et 10
+				"image":           image,
+				"affectedVersion": fmt.Sprintf("%d.%d.%d", rand.Intn(10), rand.Intn(10), rand.Intn(10)),
+				"fixedVersion":    fmt.Sprintf("%d.%d.%d", rand.Intn(10)+1, rand.Intn(10), rand.Intn(10)),
+				"cvssScore":       2.0 + rand.Float64()*8.0, // Score CVSS entre 2 et 10
 			},
 		}
 

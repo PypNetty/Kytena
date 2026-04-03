@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PypNetty/Kytena/pkg/scanner/types"
-	"github.com/sirupsen/logrus"
+	"github.com/PypNetty/kytena/pkg/loggers"
+	"github.com/PypNetty/kytena/pkg/scanner/types"
 )
 
 // Alertes communes de comportements suspects dans Kubernetes
@@ -106,7 +106,7 @@ var commonRuntimeAlerts = []struct {
 type BaseScanner struct {
 	name        string
 	description string
-	logger      *logrus.Logger
+	logger      loggers.Logger
 }
 
 // FalcoScanner simule un scanner Falco
@@ -116,14 +116,14 @@ type FalcoScanner struct {
 }
 
 // NewFalcoScanner crée un nouveau scanner Falco simulé
-func NewFalcoScanner(logger *logrus.Logger) *FalcoScanner {
+func NewFalcoScanner(logger loggers.Logger) *FalcoScanner {
 	return &FalcoScanner{
 		BaseScanner: NewBaseScanner("Falco", "Runtime behavior analysis using Falco", logger),
 		random:      rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
-func NewBaseScanner(name, description string, logger *logrus.Logger) *BaseScanner {
+func NewBaseScanner(name, description string, logger loggers.Logger) *BaseScanner {
 	return &BaseScanner{
 		name:        name,
 		description: description,
@@ -154,6 +154,18 @@ func (s *BaseScanner) FilterFindings(findings []types.VulnerabilityFinding, minS
 		}
 	}
 	return filtered
+}
+
+// SetConfig is a no-op default implementation for scanners that don't need base config.
+func (s *BaseScanner) SetConfig(_ map[string]interface{}) error {
+	return nil
+}
+
+func (s *BaseScanner) LimitFindings(findings []types.VulnerabilityFinding, max int) []types.VulnerabilityFinding {
+	if max <= 0 || len(findings) <= max {
+		return findings
+	}
+	return findings[:max]
 }
 
 // Scan simule un scan Falco
@@ -188,13 +200,6 @@ func (s *FalcoScanner) Scan(ctx context.Context, options types.ScanOptions) (*ty
 
 	s.logger.Infof("Falco scan completed in %s, %d findings", result.EndTime.Sub(result.StartTime), len(result.Findings))
 	return result, nil
-}
-
-func (s *FalcoScanner) LimitFindings(findings []types.VulnerabilityFinding, max int) []types.VulnerabilityFinding {
-	if max <= 0 || len(findings) <= max {
-		return findings
-	}
-	return findings[:max]
 }
 
 // simulateRuntimeAlerts génère des alertes runtime simulées

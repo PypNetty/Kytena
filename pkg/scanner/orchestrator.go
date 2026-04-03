@@ -6,10 +6,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/PypNetty/Kytena/pkg/models"
-	types "github.com/PypNetty/Kytena/pkg/scanner/types"
-	"github.com/PypNetty/Kytena/pkg/storage"
-	"github.com/sirupsen/logrus"
+	"github.com/PypNetty/kytena/pkg/loggers"
+	"github.com/PypNetty/kytena/pkg/models"
+	types "github.com/PypNetty/kytena/pkg/scanner/types"
+	"github.com/PypNetty/kytena/pkg/storage"
 )
 
 // VulnerabilityScanner interface represents a scanner that can scan for vulnerabilities
@@ -82,15 +82,10 @@ type ScanSummary struct {
 type ScanOrchestrator struct {
 	registry   *VulnerabilityScannerRegistry
 	repository storage.Repository
-	logger     *logrus.Logger
+	logger     loggers.Logger
 }
 
-func NewScanOrchestrator(registry *VulnerabilityScannerRegistry, repository storage.Repository, logger *logrus.Logger) *ScanOrchestrator {
-	if logger == nil {
-		logger = logrus.New()
-		logger.SetLevel(logrus.InfoLevel)
-	}
-
+func NewScanOrchestrator(registry *VulnerabilityScannerRegistry, repository storage.Repository, logger loggers.Logger) *ScanOrchestrator {
 	return &ScanOrchestrator{
 		registry:   registry,
 		repository: repository,

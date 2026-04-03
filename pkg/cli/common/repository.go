@@ -2,10 +2,9 @@ package common
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/PypNetty/Kytena/pkg/models"
-	"github.com/PypNetty/Kytena/pkg/storage"
+	"github.com/PypNetty/kytena/pkg/models"
+	"github.com/PypNetty/kytena/pkg/storage"
 )
 
 // RepositoryWrapper provides a common interface for repository operations
@@ -18,7 +17,7 @@ type RepositoryWrapper struct {
 func NewRepositoryWrapper(dataDir string, logger Logger) (*RepositoryWrapper, error) {
 	repo, err := storage.NewFileRepository(dataDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create repository: %w", err)
+		return nil, err
 	}
 
 	return &RepositoryWrapper{
@@ -30,7 +29,7 @@ func NewRepositoryWrapper(dataDir string, logger Logger) (*RepositoryWrapper, er
 // CreateKnownRisk creates a new KnownRisk
 func (r *RepositoryWrapper) CreateKnownRisk(ctx context.Context, kr *models.KnownRisk) error {
 	r.logger.Debug("Creating new KnownRisk: %s", kr.ID)
-	return r.repo.CreateKnownRisk(ctx, kr)
+	return r.repo.Save(ctx, kr)
 }
 
 // Get retrieves a KnownRisk by ID

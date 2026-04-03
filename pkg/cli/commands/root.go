@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/PypNetty/Kytena/pkg/cli/common"
+	"github.com/PypNetty/kytena/pkg/cli/common"
 	"github.com/spf13/cobra"
 )
 
@@ -17,12 +17,16 @@ var RootCmd = &cobra.Command{
 Il permet de scanner, suivre et gérer les vulnérabilités et les risques connus
 dans vos clusters Kubernetes.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		common.InitGlobalOptions()
+		baseOpts := common.GetGlobalOptions()
+
 		// Initialiser les options globales
 		globalOpts := common.GlobalOptions{
 			DataDir:    dataDir,
 			KubeConfig: kubeConfig,
 			Debug:      debug,
-			Logger:     common.GetLogger(),
+			Logger:     baseOpts.Logger,
+			Context:    cmd.Context(),
 		}
 
 		// Configurer le mode debug si activé
@@ -85,6 +89,8 @@ func init() {
 	RootCmd.AddCommand(NewUpdateCommand())
 
 	RootCmd.AddCommand(NewListCommand())
+
+	RootCmd.AddCommand(NewDashboardCommand())
 
 }
 

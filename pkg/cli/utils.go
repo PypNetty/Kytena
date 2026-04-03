@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/PypNetty/Kytena/pkg/models"
+	"github.com/PypNetty/kytena/pkg/models"
 	"github.com/fatih/color"
 )
 

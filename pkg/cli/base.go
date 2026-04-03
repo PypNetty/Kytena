@@ -6,7 +6,7 @@ import (
 	logruspkg "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/PypNetty/Kytena/pkg/logger"
+	logger "github.com/PypNetty/kytena/pkg/loggers"
 )
 
 // logrusAdapter adapte *logrus.Logger vers logger.Logger
